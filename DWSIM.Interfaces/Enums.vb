@@ -647,6 +647,13 @@ Namespace Enums
 
     End Enum
 
+    Public Enum ControlOwnership
+        Local = 0
+        External = 1
+        Manual = 2
+        Shadow = 3
+    End Enum
+
 End Namespace
 
 Namespace Enums.GraphicObjects
@@ -815,13 +822,6 @@ Namespace Enums.GraphicObjects
         CompoundMolarFraction = 8
         MeanSolidParticleSize = 9
 
-    End Enum
-
-    Public Enum ControlOwnership
-        Local = 0
-        External = 1
-        Manual = 2
-        Shadow = 3
     End Enum
 
 End Namespace
