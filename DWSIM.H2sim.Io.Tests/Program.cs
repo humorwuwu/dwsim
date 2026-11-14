@@ -182,6 +182,10 @@ namespace DWSIM.H2sim.Io.Tests
             var scaled = new Signal { Type = SignalDataType.Int32, WordOrder = WordOrder.CDAB, Scale = 10.0, Offset = -5.0 };
             Check(Math.Abs(ModbusScaler.RawToEngineering(scaled, ModbusScaler.EngineeringToRaw(scaled, 345.0)) - 345.0) < 1e-9, "scale/offset round-trip");
 
+            var temperature = new Signal { Type = SignalDataType.Int16, Scale = 10.0 };
+            Check(ModbusScaler.EngineeringToRaw(temperature, 85.3)[0] == 853, "raw = engineering * scale");
+            Check(Math.Abs(ModbusScaler.RawToEngineering(temperature, new[] { (ushort)853 }) - 85.3) < 1e-9, "engineering = raw / scale");
+
             var boolean = new Signal { Type = SignalDataType.Bool };
             Check(ModbusScaler.RawToEngineering(boolean, ModbusScaler.EngineeringToRaw(boolean, 1.0)) == 1.0, "bool round-trip");
         }
