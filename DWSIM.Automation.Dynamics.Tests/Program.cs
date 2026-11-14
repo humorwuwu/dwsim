@@ -52,6 +52,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
 
             TestOwnership(flowsheet);
+            TestBridgeHost(flowsheet);
             TestElectrolyzerDiscovery();
             TestElectrochemicalModel();
             TestInterlocks();
@@ -68,7 +69,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             pem.CreateDynamicProperties();
             Check(pem.GetDynamicProperty("Stack Temperature") != null, "dynamic stack temperature property");
 
-            var heated = pem.IntegrateStackTemperature(353.15, 60.0, 100000.0, 1.0, 4180.0, 298.15, 298.15);
+            var heated = pem.IntegrateStackTemperature(353.15, 60.0, 100000.0, 0.0, 4180.0, 298.15, 298.15);
             Check(heated > 353.15 && heated < 400.0, "stack heats up");
 
             var cooled = pem.IntegrateStackTemperature(353.15, 60.0, 0.0, 1.0, 4180.0, 298.15, 298.15);
@@ -133,6 +134,41 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(units.voltage == "V" && units.current == "A" && units.currentDensity == "A/cm2", "electrical unit properties");
             Check(units.GetUnitType("V") == UnitOfMeasure.voltage, "voltage unit type");
             Check(units.GetCurrentUnits(UnitOfMeasure.currentDensity) == "A/cm2", "current density units");
+        }
+
+        private static void TestBridgeHost(IFlowsheet flowsheet)
+        {
+            var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
+            var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
+
+            var bridge = new RecordingBridge();
+            var stats = DynamicsRunner.Run(flowsheet, new RunOptions
+            {
+                DurationSeconds = 10,
+                StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                InitialStateId = schedule.InitialFlowsheetStateID
+            }, new BridgeDynamicsHost(bridge));
+
+            Check(stats.StepCount == 2, "bridge-host run completes two steps");
+            Check(bridge.Applied == 2 && bridge.Published == 2, "bridge callbacks run once per step");
+        }
+
+        private sealed class RecordingBridge : IPlantBridge
+        {
+            public int Applied { get; private set; }
+            public int Published { get; private set; }
+
+            public string Name => "recording";
+            public BridgeStatus Status { get; } = new BridgeStatus();
+            public event EventHandler<SignalErrorEventArgs> SignalError { add { } remove { } }
+
+            public bool Connect(SignalMap map, IFlowsheet flowsheet) => true;
+            public void Disconnect() { }
+            public void ApplyInputs() => Applied++;
+            public void PublishOutputs() => Published++;
+            public void SetQuality(QualityCode quality, string reason) { }
+            public void Dispose() { }
         }
 
         private static void TestElectrolyzerDiscovery()

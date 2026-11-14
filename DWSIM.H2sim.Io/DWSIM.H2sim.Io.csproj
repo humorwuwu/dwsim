@@ -65,6 +65,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bridge\BridgeDynamicsHost.cs" />
     <Compile Include="Bridge\BridgeStatus.cs" />
     <Compile Include="Bridge\IPlantBridge.cs" />
     <Compile Include="Bridge\Modbus\ModbusAddressMap.cs" />
