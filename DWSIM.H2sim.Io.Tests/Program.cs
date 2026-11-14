@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
 using DWSIM.H2sim.Io;
+using NModbus;
 
 namespace DWSIM.H2sim.Io.Tests
 {
@@ -16,6 +20,8 @@ namespace DWSIM.H2sim.Io.Tests
             TestFromPlcConflict();
             TestAddressOverlap();
             TestCrossProtocol();
+            TestScalerRoundTrip();
+            TestModbusSelfLoop();
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
@@ -150,6 +156,85 @@ namespace DWSIM.H2sim.Io.Tests
 
             var result = SignalMapValidator.Validate(map);
             Check(!result.IsValid && result.Errors.Exists(e => e.Contains("cross-protocol conflict")), "cross-protocol conflict is reported");
+        }
+
+        private static void TestScalerRoundTrip()
+        {
+            foreach (var type in new[] { SignalDataType.Int16, SignalDataType.Int32, SignalDataType.Float32 })
+            {
+                foreach (WordOrder order in Enum.GetValues(typeof(WordOrder)))
+                {
+                    var signal = new Signal { Type = type, WordOrder = order, Scale = 1.0, Offset = 0.0 };
+                    var values = type == SignalDataType.Float32
+                        ? new[] { -2.25, 0.0, 1.5, 100.0 }
+                        : new[] { -100.0, 0.0, 37.0 };
+
+                    foreach (var value in values)
+                    {
+                        var words = ModbusScaler.EngineeringToRaw(signal, value);
+                        var back = ModbusScaler.RawToEngineering(signal, words);
+                        var tolerance = type == SignalDataType.Float32 ? 1e-5 : 1e-9;
+                        Check(Math.Abs(back - value) <= tolerance, string.Format("{0} {1} {2}", type, order, value));
+                    }
+                }
+            }
+
+            var scaled = new Signal { Type = SignalDataType.Int32, WordOrder = WordOrder.CDAB, Scale = 10.0, Offset = -5.0 };
+            Check(Math.Abs(ModbusScaler.RawToEngineering(scaled, ModbusScaler.EngineeringToRaw(scaled, 345.0)) - 345.0) < 1e-9, "scale/offset round-trip");
+
+            var boolean = new Signal { Type = SignalDataType.Bool };
+            Check(ModbusScaler.RawToEngineering(boolean, ModbusScaler.EngineeringToRaw(boolean, 1.0)) == 1.0, "bool round-trip");
+        }
+
+        private static void TestModbusSelfLoop()
+        {
+            var snapshot = new ModbusDataSnapshot();
+            snapshot.WriteInputRegisters(100, new[] { (ushort)853 });
+
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+            var factory = new ModbusFactory();
+            var network = factory.CreateSlaveNetwork(listener);
+            network.AddSlave(factory.CreateSlave((byte)1, new ModbusSlaveDataStore(snapshot)));
+
+            var cancellation = new CancellationTokenSource();
+            var listenTask = network.ListenAsync(cancellation.Token);
+            TcpClient client = null;
+
+            try
+            {
+                Thread.Sleep(150);
+                client = new TcpClient("127.0.0.1", port);
+                var master = factory.CreateMaster(client);
+
+                var input = master.ReadInputRegisters((byte)1, 100, 1);
+                Check(input.Length == 1 && input[0] == 853, "input register round-trip");
+
+                master.WriteSingleRegister((byte)1, 400, 1234);
+                Check(snapshot.ReadHoldingRegisters(400, 1)[0] == 1234, "holding register write");
+
+                master.WriteSingleCoil((byte)1, 5, true);
+                Check(snapshot.ReadCoils(5, 1)[0], "coil write");
+
+                master.WriteMultipleRegisters((byte)1, 410, new[] { (ushort)11, (ushort)22 });
+                var registers = snapshot.ReadHoldingRegisters(410, 2);
+                Check(registers[0] == 11 && registers[1] == 22, "multiple register write");
+            }
+            catch (Exception ex)
+            {
+                Check(false, "Modbus self-loop exception: " + ex);
+            }
+            finally
+            {
+                client?.Close();
+                cancellation.Cancel();
+                try { listener.Stop(); } catch { }
+                try { (network as IDisposable)?.Dispose(); } catch { }
+                try { listenTask.Wait(2000); } catch { }
+                cancellation.Dispose();
+            }
         }
 
         private static Signal MakeSignal(string id, string tag, string property, int address)

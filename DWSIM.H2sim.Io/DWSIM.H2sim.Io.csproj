@@ -56,6 +56,9 @@
     <ImplicitlyExpandNETStandardFacades>false</ImplicitlyExpandNETStandardFacades>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NModbus, Version=3.0.81.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\NModbus.3.0.81\lib\net46\NModbus.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
@@ -64,6 +67,11 @@
   <ItemGroup>
     <Compile Include="Bridge\BridgeStatus.cs" />
     <Compile Include="Bridge\IPlantBridge.cs" />
+    <Compile Include="Bridge\Modbus\ModbusAddressMap.cs" />
+    <Compile Include="Bridge\Modbus\ModbusDataSnapshot.cs" />
+    <Compile Include="Bridge\Modbus\ModbusScaler.cs" />
+    <Compile Include="Bridge\Modbus\ModbusSlaveDataStore.cs" />
+    <Compile Include="Bridge\Modbus\ModbusTcpServerBridge.cs" />
     <Compile Include="Bridge\QualityCode.cs" />
     <Compile Include="Control\ControlArbiter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -104,6 +112,9 @@
       <Name>DWSIM.UnitOperations</Name>
       <Private>False</Private>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
