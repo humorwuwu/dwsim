@@ -9,3 +9,5 @@
 - 6 个动态样例的回归基准尚未采集；目前 CI 只跑 `Dynamic Simulation - Water Tank Level Control.dwxmz`。
 - `ControlArbiter` 尚未被 runner 或桥调用；T-3.4 的 `ApplyInputs` 负责接入。
 - Gate 0 V-3（macOS + Mono）仍未验证。
+- T-1.2 的 ALK 半经验系数（`a_act`/`b_act`/`R_ohm_ref`/`E_act_ohm`）、Faraday 低载曲线和 `crossover_coeff` 是占位值，等 R9/R2 数据标定；Bzovsky 2024 的 <2%/<3% 数值对比也待论文数据。
+- 电解槽的 `Calculate` 已实现，但还没有带完整 flowsheet 的质量/能量守恒回归；等 T-4.1 的流程模板和 T-5.2 的黄金数据一起补。
