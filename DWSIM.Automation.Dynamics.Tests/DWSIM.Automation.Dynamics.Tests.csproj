@@ -83,6 +83,11 @@
       <Name>DWSIM.UnitOperations</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\DWSIM.SharedClasses\DWSIM.SharedClasses.vbproj">
+      <Project>{30E167D2-5B5A-453A-A92C-18FF3BBB6691}</Project>
+      <Name>DWSIM.SharedClasses</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\DWSIM.Interfaces\DWSIM.Interfaces.vbproj">
       <Project>{50BFD69A-487E-4B38-86EA-48ACD85A0EB1}</Project>
       <Name>DWSIM.Interfaces</Name>
