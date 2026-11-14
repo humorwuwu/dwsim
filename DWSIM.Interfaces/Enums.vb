@@ -225,6 +225,9 @@ Namespace Enums
         mole = 69
         emission_factor = 70
         specificpower = 71
+        voltage = 72
+        current = 73
+        currentDensity = 74
 
     End Enum
 

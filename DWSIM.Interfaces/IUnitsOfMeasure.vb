@@ -172,4 +172,10 @@ Public Interface IUnitsOfMeasure
 
     Property specific_power As String
 
+    Property voltage As String
+
+    Property current As String
+
+    Property currentDensity As String
+
 End Interface

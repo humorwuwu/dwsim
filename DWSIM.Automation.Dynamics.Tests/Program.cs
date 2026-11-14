@@ -88,6 +88,11 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             var alkaline = new AlkalineElectrolyzer();
             Check(alkaline.CreateElectrochemicalModel() is ModelAlkaline_SemiEmpirical, "alkaline model factory");
+
+            var units = new DWSIM.SharedClasses.SystemsOfUnits.SI();
+            Check(units.voltage == "V" && units.current == "A" && units.currentDensity == "A/cm2", "electrical unit properties");
+            Check(units.GetUnitType("V") == UnitOfMeasure.voltage, "voltage unit type");
+            Check(units.GetCurrentUnits(UnitOfMeasure.currentDensity) == "A/cm2", "current density units");
         }
 
         private static void TestElectrolyzerDiscovery()

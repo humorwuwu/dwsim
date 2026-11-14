@@ -181,6 +181,12 @@ Namespace SystemsOfUnits
 
         Public Property specific_power As String = "kW/[kg/s]" Implements IUnitsOfMeasure.specific_power
 
+        Public Property voltage As String = "V" Implements IUnitsOfMeasure.voltage
+
+        Public Property current As String = "A" Implements IUnitsOfMeasure.current
+
+        Public Property currentDensity As String = "A/cm2" Implements IUnitsOfMeasure.currentDensity
+
         Public Function GetUnitSet(measureID As Enums.UnitOfMeasure) As List(Of String) Implements IUnitsOfMeasure.GetUnitSet
 
             Dim units As New List(Of String)
@@ -209,6 +215,12 @@ Namespace SystemsOfUnits
                     units.AddRange(New String() {"kJ/[kg.K]", "cal/[g.C]", "BTU/[lbm.R]"})
                 Case Enums.UnitOfMeasure.specificpower
                     units.AddRange(New String() {"kW/[kg/s]", "kW/[ton/h]", "cal/g", "BTU/h/[lbm/h]", "kcal/h/[kg/h]"})
+                Case Enums.UnitOfMeasure.voltage
+                    units.AddRange(New String() {"V", "mV", "kV"})
+                Case Enums.UnitOfMeasure.current
+                    units.AddRange(New String() {"A", "mA", "kA"})
+                Case Enums.UnitOfMeasure.currentDensity
+                    units.AddRange(New String() {"A/cm2", "A/m2", "mA/cm2"})
                 Case Enums.UnitOfMeasure.molecularWeight
                     units.AddRange(New String() {"kg/kmol", "g/mol", "lbm/lbmol"})
                 Case Enums.UnitOfMeasure.surfaceTension
@@ -319,6 +331,12 @@ Namespace SystemsOfUnits
                     Return Enums.UnitOfMeasure.entropy
                 Case "kW/[kg/s]", "kW/[ton/h]", "cal/g", "BTU/h/[lbm/h]", "kcal/h/[kg/h]"
                     Return Enums.UnitOfMeasure.specificpower
+                Case "V", "mV", "kV"
+                    Return Enums.UnitOfMeasure.voltage
+                Case "A", "mA", "kA"
+                    Return Enums.UnitOfMeasure.current
+                Case "A/cm2", "A/m2", "mA/cm2"
+                    Return Enums.UnitOfMeasure.currentDensity
                 Case "kg/kmol", "g/mol", "lbm/lbmol"
                     Return Enums.UnitOfMeasure.molecularWeight
                 Case "N/m", "dyn/cm", "lbf/in"
@@ -489,6 +507,12 @@ Namespace SystemsOfUnits
                     Return conductance
                 Case Enums.UnitOfMeasure.specificpower
                     Return specific_power
+                Case Enums.UnitOfMeasure.voltage
+                    Return voltage
+                Case Enums.UnitOfMeasure.current
+                    Return current
+                Case Enums.UnitOfMeasure.currentDensity
+                    Return currentDensity
                 Case Else
                     Return ""
             End Select
@@ -573,6 +597,9 @@ Namespace SystemsOfUnits
                 .kvalue = "-"
                 .logKvalue = "-"
                 .surfaceTension = "N/m"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kW"
                 .head = "m"
                 .deltaP = "Pa"
@@ -665,6 +692,9 @@ Namespace SystemsOfUnits
                 .kvalue = "-"
                 .logKvalue = "-"
                 .surfaceTension = "N/m"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kW"
                 .head = "m"
                 .deltaP = "bar"
@@ -756,6 +786,9 @@ Namespace SystemsOfUnits
                 .kvalue = "-"
                 .logKvalue = "-"
                 .surfaceTension = "N/m"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kW"
                 .head = "m"
                 .deltaP = "kgf/cm2"
@@ -846,6 +879,9 @@ Namespace SystemsOfUnits
                 .kvalue = "-"
                 .logKvalue = "-"
                 .surfaceTension = "N/m"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kW"
                 .head = "m"
                 .deltaP = "kgf/cm2"
@@ -936,6 +972,9 @@ Namespace SystemsOfUnits
                 .kvalue = "-"
                 .logKvalue = "-"
                 .surfaceTension = "N/m"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kW"
                 .head = "m"
                 .deltaP = "kgf/cm2"
@@ -1026,6 +1065,9 @@ Namespace SystemsOfUnits
                 .kvalue = "-"
                 .logKvalue = "-"
                 .surfaceTension = "N/m"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kJ/d"
                 .head = "m"
                 .deltaP = "kgf/cm2"
@@ -1116,6 +1158,9 @@ Namespace SystemsOfUnits
                 .kvalue = "-"
                 .logKvalue = "-"
                 .surfaceTension = "N/m"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kW"
                 .head = "m"
                 .deltaP = "bar"
@@ -1208,6 +1253,9 @@ Namespace SystemsOfUnits
                 .surfaceTension = "lbf/in"
                 .volumetricFlow = "ft3/s"
                 .cinematic_viscosity = "ft2/s"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "BTU/h"
                 .head = "ft"
                 .deltaP = "lbf/ft2"
@@ -1298,6 +1346,9 @@ Namespace SystemsOfUnits
                 .surfaceTension = "dyn/cm2"
                 .volumetricFlow = "cm3/s"
                 .cinematic_viscosity = "cSt"
+                .voltage = "V"
+                .current = "A"
+                .currentDensity = "A/cm2"
                 .heatflow = "kcal/h"
                 .head = "m"
                 .deltaT = "C."
