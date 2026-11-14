@@ -58,6 +58,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestOwnership(flowsheet);
             TestBridgeHost(flowsheet);
             TestModbusClosedLoop(flowsheet);
+            TestOpcUaClosedLoop(flowsheet);
             TestElectrolyzerDiscovery();
             TestElectrochemicalModel();
             TestInterlocks();
@@ -271,6 +272,78 @@ namespace DWSIM.Automation.Dynamics.Tests
                     client?.Close();
                     bridge.Disconnect();
                 }
+            }
+        }
+
+        private static void TestOpcUaClosedLoop(IFlowsheet flowsheet)
+        {
+            if (Environment.GetEnvironmentVariable("H2SIM_OPCUA_TEST") != "1") return;
+
+            var pid = flowsheet.SimulationObjects.Values.OfType<PIDController>().FirstOrDefault();
+            Check(pid != null, "OPC UA closed loop: sample PID");
+            if (pid == null) return;
+
+            var connection = new ConnectionConfig
+            {
+                Name = "PLC",
+                Protocol = BridgeProtocol.OpcUaClient,
+                EndpointUrl = "opc.tcp://127.0.0.1:4840/h2sim/",
+                SecurityPolicy = "None",
+                Anonymous = true,
+                Enabled = true
+            };
+
+            var map = new SignalMap();
+            map.Connections.Add(connection);
+            map.Signals.Add(new Signal
+            {
+                Id = "SP",
+                Direction = SignalDirection.FromPlc,
+                ObjectTag = pid.Name,
+                Property = "SetPointAbs",
+                Unit = "m",
+                Type = SignalDataType.Float32,
+                Scale = 1.0,
+                OpcNodeId = "P_set",
+                OpcNamespaceUri = "urn:openplc:opcua:namespace",
+                ConnectionName = "PLC"
+            });
+            map.Signals.Add(new Signal
+            {
+                Id = "OUT",
+                Direction = SignalDirection.ToPlc,
+                ObjectTag = pid.Name,
+                Property = "OutputAbs",
+                Unit = "",
+                Type = SignalDataType.Float32,
+                Scale = 1.0,
+                OpcNodeId = "Out",
+                OpcNamespaceUri = "urn:openplc:opcua:namespace",
+                ConnectionName = "PLC"
+            });
+
+            using (var bridge = new OpcUaClientBridge())
+            {
+                Check(bridge.Connect(map, flowsheet), "OPC UA connects: " + bridge.Status.Message);
+                if (!bridge.Status.Connected) return;
+
+                var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
+                var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
+                var stats = DynamicsRunner.Run(flowsheet, new RunOptions
+                {
+                    DurationSeconds = 10,
+                    StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                    ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                    InitialStateId = schedule.InitialFlowsheetStateID
+                }, new BridgeDynamicsHost(bridge));
+
+                Check(stats.StepCount == 2, "OPC UA closed loop: two steps");
+                Check(Math.Abs(pid.AdjustValue - 1.8) < 1e-3, "OPC UA setpoint reached the PID");
+
+                var published = new OpcUaSessionFactory().ReadDouble(connection, "Out", "urn:openplc:opcua:namespace");
+                Check(Math.Abs(published - pid.OutputAbs) < 0.1, "OPC UA output published");
+
+                bridge.Disconnect();
             }
         }
 

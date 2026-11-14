@@ -59,10 +59,24 @@ jobs:
             Pop-Location
           }
 
-      - name: Dynamics headless smoke test
+      - name: Start mock OPC UA server
         if: matrix.Configuration == 'Release'
         shell: pwsh
         run: |
+          pip install asyncua
+          $log = Join-Path $env:TEMP "h2sim-opcua.log"
+          Start-Process python -ArgumentList "tests/opcua/mock_server.py" -NoNewWindow -RedirectStandardOutput $log -RedirectStandardError "$log.err"
+          Start-Sleep -Seconds 5
+          Get-Content $log
+          if (-not (Select-String -Path $log -Pattern "ready" -Quiet)) { throw "mock OPC UA server did not start" }
+
+      - name: Dynamics headless smoke test
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        env:
+          H2SIM_OPCUA_TEST: "1"
+        run: |
+          Copy-Item DWSIM.H2sim.Io\bin\x64\Release\* DistPackages\Windows\ -Force
           Copy-Item DWSIM.Automation.Dynamics.Tests\bin\x64\Release\* DistPackages\Windows\ -Force
           Push-Location DistPackages\Windows
           try {

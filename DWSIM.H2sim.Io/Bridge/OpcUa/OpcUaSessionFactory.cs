@@ -29,7 +29,7 @@ namespace DWSIM.H2sim.Io
                 .Create()
                 .GetAwaiter().GetResult();
             Configuration.CertificateValidator.CertificateValidation += (sender, e) => e.Accept = true;
-            application.CheckApplicationInstanceCertificate(false, 2048).GetAwaiter().GetResult();
+            application.CheckApplicationInstanceCertificate(true, 2048).GetAwaiter().GetResult();
 
             var useSecurity = !string.Equals(connection.SecurityPolicy, "None", StringComparison.OrdinalIgnoreCase);
             var description = CoreClientUtils.SelectEndpoint(Configuration, connection.EndpointUrl, useSecurity);
@@ -44,6 +44,22 @@ namespace DWSIM.H2sim.Io
             session.KeepAlive += (sender, e) => keepAlive?.Invoke(session, e);
 
             return session;
+        }
+
+        /// <summary>Reads one numeric node with a temporary session (used by tests and diagnostics).</summary>
+        public double ReadDouble(ConnectionConfig connection, string nodeId, string namespaceUri)
+        {
+            var session = CreateSession(connection, null);
+            try
+            {
+                var id = OpcUaNodeResolver.Resolve(nodeId, namespaceUri, session.NamespaceUris);
+                var value = session.ReadValue(id);
+                return Convert.ToDouble(value.Value, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            finally
+            {
+                try { session.Close(); } catch { }
+            }
         }
     }
 }
