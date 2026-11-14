@@ -57,6 +57,8 @@ namespace DWSIM.Automation.Dynamics
             var pidControllers = flowsheet.SimulationObjects.Values.OfType<PIDController>().ToList();
             var pythonControllers = flowsheet.SimulationObjects.Values.OfType<PythonController>().ToList();
 
+            WireControllerObjects(flowsheet, pidControllers, pythonControllers);
+
             integrator.RealTime = options.RealTime;
 
             var stats = new RunStats();
@@ -232,6 +234,32 @@ namespace DWSIM.Automation.Dynamics
         public static Task<RunStats> RunAsync(IFlowsheet flowsheet, RunOptions options = null, IDynamicsHost host = null)
         {
             return Task.Run(() => Run(flowsheet, options, host));
+        }
+
+        // the UI binds controllers when a flowsheet is opened; headless runs need the same wiring
+        private static void WireControllerObjects(IFlowsheet flowsheet, IEnumerable<PIDController> pidControllers, IEnumerable<PythonController> pythonControllers)
+        {
+            foreach (var controller in pidControllers)
+            {
+                if (controller.ManipulatedObject == null)
+                    controller.ManipulatedObject = FindObject(flowsheet, controller.ManipulatedObjectData.ID);
+                if (controller.ControlledObject == null)
+                    controller.ControlledObject = FindObject(flowsheet, controller.ControlledObjectData.ID);
+            }
+
+            foreach (var controller in pythonControllers)
+            {
+                if (controller.ManipulatedObject == null)
+                    controller.ManipulatedObject = FindObject(flowsheet, controller.ManipulatedObjectData.ID);
+                if (controller.ControlledObject == null)
+                    controller.ControlledObject = FindObject(flowsheet, controller.ControlledObjectData.ID);
+            }
+        }
+
+        private static BaseClass FindObject(IFlowsheet flowsheet, string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            return flowsheet.SimulationObjects.Values.OfType<BaseClass>().FirstOrDefault(x => x.Name == id);
         }
 
         private static void RestoreState(IFlowsheet flowsheet, string stateId)
