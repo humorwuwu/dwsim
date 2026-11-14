@@ -66,6 +66,7 @@ namespace DWSIM.Automation.Dynamics
             IFlowsheet clone = null;
             EventProcessor eventProcessor = null;
             var started = false;
+            var previousDynamicMode = flowsheet.DynamicMode;
 
             try
             {
@@ -89,6 +90,7 @@ namespace DWSIM.Automation.Dynamics
                 integrator.MonitoredVariableValues.Clear();
 
                 flowsheet.SupressMessages = true;
+                flowsheet.DynamicMode = true;
                 flowsheet.ClearLog();
 
                 clone = flowsheet.Clone();
@@ -207,6 +209,7 @@ namespace DWSIM.Automation.Dynamics
             finally
             {
                 flowsheet.SupressMessages = false;
+                flowsheet.DynamicMode = previousDynamicMode;
 
                 if (started)
                 {
