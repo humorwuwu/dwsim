@@ -35,7 +35,7 @@ Namespace UnitOperations
             Dim target = powerKW
             Dim fx As Func(Of Double, Double) = Function(i) PowerAt(i) - target
 
-            Return DWSIM.MathEx.BrentOpt.Brent.BrentOpt3(i_min, i_max, 200, 1.0E-6, 100, fx)
+            Return DWSIM.MathOps.MathEx.BrentOpt.Brent.BrentOpt3(i_min, i_max, 200, 1.0E-6, 100, fx)
 
         End Function
 
