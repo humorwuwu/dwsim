@@ -26,10 +26,22 @@ jobs:
         shell: pwsh
         run: ./scripts/build.ps1 -Configuration ${{ matrix.Configuration }} -Platform x64
 
+      - name: Smoke test DWSIM startup
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          $exe = "DistPackages\Windows\DWSIM.exe"
+          if (!(Test-Path $exe)) { throw "missing $exe" }
+          $p = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($p.HasExited) { throw "DWSIM exited during startup (code $($p.ExitCode))" }
+          Write-Host "DWSIM started (pid $($p.Id))"
+          Stop-Process -Id $p.Id -Force
+
       - name: Upload build output
         if: matrix.Configuration == 'Release'
         uses: actions/upload-artifact@v4
         with:
           name: h2sim-windows-x64
-          path: DWSIM/bin/x64/Release/
+          path: DistPackages/Windows/
           if-no-files-found: error
