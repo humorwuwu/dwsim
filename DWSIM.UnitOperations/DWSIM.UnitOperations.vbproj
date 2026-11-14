@@ -736,6 +736,13 @@
     <None Include="UnitOperations\CleanEnergies\PEMFC_LarminieDicks.vb" />
     <Compile Include="UnitOperations\CleanEnergies\SolarPanel.vb" />
     <Compile Include="UnitOperations\CleanEnergies\WaterElectrolyzer.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\AlkalineElectrolyzer.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerCalculator.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerModelParameter.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerUnitOpBase.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\IElectrochemicalModel.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\PEMElectrolyzer.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\VoltageBreakdown.vb" />
     <Compile Include="UnitOperations\CleanEnergies\WindTurbine.vb" />
     <Compile Include="UnitOperations\DummyUO.vb" />
     <Compile Include="UnitOperations\CleanEnergies\PEMFuelCellUnitOpBase.vb" />
