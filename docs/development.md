@@ -40,6 +40,7 @@ msbuild DWSIM.sln /p:Configuration=ReleaseWinMac /p:Platform=x64 /m
 
 ## 已知限制
 
+- Linux/Wine/Raspberry 构建配置已移除；工程文件里的 `ReleaseLinux|*` 配置块仍保留，但 `LINUX` 编译符号不会再生效。
 - Gate 0 的 V-1/V-2 需要在 Windows/CI 上验证；V-3 需要 Mono 才能在本机验证。
 - 动态样例回归基准（T-3.1 前置）尚未采集。
 - 详细任务与验收见 `docs/h2sim-implementation-plan.md`。
