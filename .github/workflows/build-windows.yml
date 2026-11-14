@@ -58,3 +58,16 @@ jobs:
           } finally {
             Pop-Location
           }
+
+      - name: Signal map tests
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          Copy-Item DWSIM.H2sim.Io.Tests\bin\x64\Release\* DistPackages\Windows\ -Force
+          Push-Location DistPackages\Windows
+          try {
+            .\DWSIM.H2sim.Io.Tests.exe
+            if ($LASTEXITCODE -ne 0) { throw "signal map tests failed ($LASTEXITCODE)" }
+          } finally {
+            Pop-Location
+          }
