@@ -2,11 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
 using DWSIM.H2sim.Io;
 using DWSIM.Interfaces;
 using DWSIM.Interfaces.Enums;
 using DWSIM.UnitOperations.SpecialOps;
 using DWSIM.UnitOperations.UnitOperations;
+using NModbus;
 
 namespace DWSIM.Automation.Dynamics.Tests
 {
@@ -53,6 +57,7 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             TestOwnership(flowsheet);
             TestBridgeHost(flowsheet);
+            TestModbusClosedLoop(flowsheet);
             TestElectrolyzerDiscovery();
             TestElectrochemicalModel();
             TestInterlocks();
@@ -169,6 +174,104 @@ namespace DWSIM.Automation.Dynamics.Tests
             public void PublishOutputs() => Published++;
             public void SetQuality(QualityCode quality, string reason) { }
             public void Dispose() { }
+        }
+
+        private static void TestModbusClosedLoop(IFlowsheet flowsheet)
+        {
+            var pid = flowsheet.SimulationObjects.Values.OfType<PIDController>().FirstOrDefault();
+            Check(pid != null, "closed loop: sample PID");
+            if (pid == null) return;
+
+            var tankTag = pid.ControlledObjectData.ID;
+            if (!flowsheet.SimulationObjects.ContainsKey(tankTag))
+            {
+                Check(false, "closed loop: tank object");
+                return;
+            }
+            var tank = flowsheet.SimulationObjects[tankTag];
+
+            var probe = new TcpListener(IPAddress.Loopback, 0);
+            probe.Start();
+            var port = ((IPEndPoint)probe.LocalEndpoint).Port;
+            probe.Stop();
+
+            var map = new SignalMap();
+            map.Connections.Add(new ConnectionConfig
+            {
+                Name = "Loop",
+                Protocol = BridgeProtocol.ModbusTcpServer,
+                Host = "127.0.0.1",
+                Port = port,
+                UnitId = 1,
+                Enabled = true
+            });
+            map.Signals.Add(new Signal
+            {
+                Id = "SP",
+                Direction = SignalDirection.FromPlc,
+                ObjectTag = pid.Name,
+                Property = "SetPointAbs",
+                Unit = "m",
+                Type = SignalDataType.Int16,
+                Scale = 1000.0,
+                ModbusArea = ModbusArea.HoldingRegister,
+                ModbusAddress = 0,
+                ConnectionName = "Loop"
+            });
+            map.Signals.Add(new Signal
+            {
+                Id = "LEVEL",
+                Direction = SignalDirection.ToPlc,
+                ObjectTag = tankTag,
+                Property = "Liquid Level",
+                Unit = "m",
+                Type = SignalDataType.Int16,
+                Scale = 1000.0,
+                ModbusArea = ModbusArea.InputRegister,
+                ModbusAddress = 0,
+                ConnectionName = "Loop"
+            });
+
+            using (var bridge = new ModbusTcpServerBridge())
+            {
+                Check(bridge.Connect(map, flowsheet), "bridge connects: " + bridge.Status.Message);
+                if (!bridge.Status.Connected) return;
+
+                TcpClient client = null;
+                try
+                {
+                    Thread.Sleep(200);
+                    client = new TcpClient("127.0.0.1", port);
+                    var master = new ModbusFactory().CreateMaster(client);
+                    master.WriteSingleRegister(1, 0, 1800);
+
+                    var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
+                    var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
+                    var stats = DynamicsRunner.Run(flowsheet, new RunOptions
+                    {
+                        DurationSeconds = 10,
+                        StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                        ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                        InitialStateId = schedule.InitialFlowsheetStateID
+                    }, new BridgeDynamicsHost(bridge));
+
+                    Check(stats.StepCount == 2, "closed loop: two steps");
+                    Check(Math.Abs(pid.AdjustValue - 1.8) < 1e-6, "closed loop: PLC setpoint reached the PID");
+
+                    var raw = master.ReadInputRegisters(1, 0, 1)[0];
+                    var level = Convert.ToDouble(tank.GetPropertyValue("Liquid Level"));
+                    Check(!double.IsNaN(level) && Math.Abs(raw - level * 1000.0) <= 2.0, "closed loop: level published");
+                }
+                catch (Exception ex)
+                {
+                    Check(false, "closed loop exception: " + ex);
+                }
+                finally
+                {
+                    client?.Close();
+                    bridge.Disconnect();
+                }
+            }
         }
 
         private static void TestElectrolyzerDiscovery()
