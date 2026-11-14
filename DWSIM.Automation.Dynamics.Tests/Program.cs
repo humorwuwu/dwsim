@@ -22,7 +22,9 @@ namespace DWSIM.Automation.Dynamics.Tests
             var stats = DynamicsRunner.Run(flowsheet, new RunOptions
             {
                 DurationSeconds = 60,
-                StepSeconds = integrator.IntegrationStep.TotalSeconds
+                StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                InitialStateId = schedule.InitialFlowsheetStateID
             }, new HeadlessDynamicsHost());
 
             Console.WriteLine("stepCount={0} simTime={1} quality={2}", stats.StepCount, stats.SimTime, stats.Quality);
