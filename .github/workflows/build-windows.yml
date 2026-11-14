@@ -1,0 +1,26 @@
+name: build-windows
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore and build
+        shell: pwsh
+        run: ./scripts/build.ps1 -Configuration Release -Platform x64
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2sim-windows-x64
+          path: DWSIM/bin/x64/Release/
+          if-no-files-found: error

@@ -119,3 +119,14 @@ TCPServer/bin/Debug/*
 /DWSIM.Plugins.HeatOfCombustion/.vs
 /DWSIM.ProFeatures/.vs
 /DWSIM.Thermodynamics/.vs
+
+# H2sim
+/packages/
+/release/
+/build/
+/target/
+/.build/
+/.tools/
+.DS_Store
+__pycache__/
+*sync-conflict*
