@@ -20,7 +20,14 @@ namespace DWSIM.H2sim.Io
                 ApplicationType = ApplicationType.Client
             };
 
-            Configuration = application.Build("urn:h2sim:client", "urn:h2sim:client").GetAwaiter().GetResult();
+            Configuration = application
+                .Build("urn:h2sim:client", "urn:h2sim:client")
+                .AsClient()
+                .AddSecurityConfiguration("CN=H2sim", null, null, null)
+                .SetAutoAcceptUntrustedCertificates(true)
+                .SetAddAppCertToTrustedStore(true)
+                .Create()
+                .GetAwaiter().GetResult();
             Configuration.CertificateValidator.CertificateValidation += (sender, e) => e.Accept = true;
             application.CheckApplicationInstanceCertificate(false, 2048).GetAwaiter().GetResult();
 
