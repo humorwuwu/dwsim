@@ -1,0 +1,12 @@
+<Project>
+  <!--
+    shortcut: 上游多个工程的 PostBuildEvent 假设 DistPackages 目录已存在，
+    干净环境里末尾的 rd /s /q 返回 1，导致构建失败。这里在每个 PostBuildEvent
+    前重建这些目录。T-0.2 移除 Linux / Windows_32 发行配置后可缩减此列表。
+  -->
+  <Target Name="H2simEnsureDistPackageDirs"
+          BeforeTargets="PostBuildEvent;AfterBuild"
+          Condition="'$(Configuration)' == 'Release'">
+    <MakeDir Directories="$(MSBuildThisFileDirectory)DistPackages\Windows\plugins\x86;$(MSBuildThisFileDirectory)DistPackages\Windows\plugins\x64;$(MSBuildThisFileDirectory)DistPackages\Windows\x86;$(MSBuildThisFileDirectory)DistPackages\Windows\x64;$(MSBuildThisFileDirectory)DistPackages\Windows_32\plugins\x86;$(MSBuildThisFileDirectory)DistPackages\Windows_32\plugins\x64;$(MSBuildThisFileDirectory)DistPackages\Windows_32\x86;$(MSBuildThisFileDirectory)DistPackages\Windows_32\x64;$(MSBuildThisFileDirectory)DistPackages\macOS\plugins\x86;$(MSBuildThisFileDirectory)DistPackages\macOS\plugins\x64;$(MSBuildThisFileDirectory)DistPackages\macOS\x86;$(MSBuildThisFileDirectory)DistPackages\macOS\x64;$(MSBuildThisFileDirectory)DistPackages\Linux\plugins\x86;$(MSBuildThisFileDirectory)DistPackages\Linux\plugins\x64;$(MSBuildThisFileDirectory)DistPackages\Linux\x86;$(MSBuildThisFileDirectory)DistPackages\Linux\x64" />
+  </Target>
+</Project>

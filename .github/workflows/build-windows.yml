@@ -14,6 +14,10 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Install .NET Framework 4.6.1 targeting pack
+        shell: pwsh
+        run: choco install netfx-4.6.1-devpack -y --no-progress
+
       - name: Restore and build
         shell: pwsh
         run: ./scripts/build.ps1 -Configuration Release -Platform x64
