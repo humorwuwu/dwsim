@@ -74,6 +74,15 @@
       <Project>{04348922-C1B2-495F-8454-08CD25461A41}</Project>
       <Name>DWSIM.Automation.Dynamics</Name>
     </ProjectReference>
+    <ProjectReference Include="..\DWSIM.H2sim.Io\DWSIM.H2sim.Io.csproj">
+      <Project>{61406366-51B9-4180-A82A-65AEED603C06}</Project>
+      <Name>DWSIM.H2sim.Io</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\DWSIM.UnitOperations\DWSIM.UnitOperations.vbproj">
+      <Project>{9D7733E4-9B6F-437F-AAEC-CA3106ACA688}</Project>
+      <Name>DWSIM.UnitOperations</Name>
+      <Private>False</Private>
+    </ProjectReference>
     <ProjectReference Include="..\DWSIM.Interfaces\DWSIM.Interfaces.vbproj">
       <Project>{50BFD69A-487E-4B38-86EA-48ACD85A0EB1}</Project>
       <Name>DWSIM.Interfaces</Name>

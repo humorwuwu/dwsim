@@ -1,10 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using DWSIM.H2sim.Io;
+using DWSIM.Interfaces;
+using DWSIM.Interfaces.Enums;
+using DWSIM.UnitOperations.SpecialOps;
 
 namespace DWSIM.Automation.Dynamics.Tests
 {
     internal static class Program
     {
+        private static int _failures;
+
         private static int Main(string[] args)
         {
             var path = args.Length > 0
@@ -42,8 +50,57 @@ namespace DWSIM.Automation.Dynamics.Tests
                 return 1;
             }
 
-            Console.WriteLine("PASS");
-            return 0;
+            TestOwnership(flowsheet);
+
+            Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
+            return _failures == 0 ? 0 : 1;
+        }
+
+        private static void TestOwnership(IFlowsheet flowsheet)
+        {
+            var controller = flowsheet.SimulationObjects.Values.OfType<PIDController>().FirstOrDefault();
+            Check(controller != null, "sample has a PID controller");
+            if (controller == null) return;
+
+            var objectTag = controller.ManipulatedObjectData.ID;
+            var property = controller.ManipulatedObjectData.PropertyName;
+
+            var map = new SignalMap();
+            map.Connections.Add(new ConnectionConfig { Name = "M", Protocol = BridgeProtocol.ModbusTcpServer });
+            map.Signals.Add(new Signal { Id = "A", Direction = SignalDirection.FromPlc, ObjectTag = objectTag, Property = property, ConnectionName = "M", Scale = 1.0 });
+            map.Signals.Add(new Signal { Id = "B", Direction = SignalDirection.FromPlc, ObjectTag = objectTag, Property = property, ConnectionName = "M", Scale = 1.0 });
+
+            var arbiter = new ControlArbiter(flowsheet, map);
+            var errors = new List<string>();
+            arbiter.SignalError += (sender, e) => errors.Add(e.Message);
+
+            var mv = controller.MVValue;
+            arbiter.BeginStep();
+            Check(arbiter.WriteExternal(map.Signals[0], mv), "first external write accepted");
+            Check(!arbiter.WriteExternal(map.Signals[1], mv), "second writer rejected");
+            Check(errors.Any(e => e.Contains("conflict")), "conflict is reported");
+            Check(controller.Ownership == ControlOwnership.External, "ownership became External");
+
+            Check(arbiter.SwitchOwnership(objectTag, property, ControlOwnership.Local), "switch to Local");
+            Check(controller.Ownership == ControlOwnership.Local, "ownership became Local");
+            Check(controller.CurrentError == 0.0 && controller.LastError == 0.0, "error history cleared on transfer");
+
+            controller.OutputRateLimit = 1.0;
+            flowsheet.DynamicMode = true;
+            controller.Solve();
+            var before = controller.MVValue;
+            controller.AdjustValue += 50.0;
+            controller.Solve();
+            var after = controller.MVValue;
+            Check(Math.Abs(after - before) <= 5.0 + 1e-6, "output rate limit bounds the move");
+            flowsheet.DynamicMode = false;
+        }
+
+        private static void Check(bool condition, string message)
+        {
+            if (condition) return;
+            _failures++;
+            Console.Error.WriteLine("FAIL: " + message);
         }
     }
 }

@@ -817,6 +817,13 @@ Namespace Enums.GraphicObjects
 
     End Enum
 
+    Public Enum ControlOwnership
+        Local = 0
+        External = 1
+        Manual = 2
+        Shadow = 3
+    End Enum
+
 End Namespace
 
 

@@ -59,6 +59,10 @@ Namespace SpecialOps
         Protected m_ControlledObjectData As New SpecialOps.Helpers.SpecialOpObjectInfo
         Protected m_ReferencedObjectData As New SpecialOps.Helpers.SpecialOpObjectInfo
 
+        Private m_RampedSP As Nullable(Of Double) = Nothing
+
+        Private m_LastOutputAbs As Nullable(Of Double) = Nothing
+
         Protected m_CV_OK As Boolean = False
         Protected m_MV_OK As Boolean = False
         Protected m_RV_OK As Boolean = False
@@ -106,6 +110,29 @@ Namespace SpecialOps
         Public Property ManualOverride As Boolean = False
 
         Public Property ReverseActing As Boolean = False
+
+        ''' <summary>When true, the controller follows the current MV without writing it.</summary>
+        Public Property TrackingMode As Boolean = False
+
+        ''' <summary>Maximum MV change per second in engineering units; 0 disables the limit.</summary>
+        Public Property OutputRateLimit As Double = 0.0
+
+        ''' <summary>Maximum setpoint change per second in engineering units; 0 disables the ramp.</summary>
+        Public Property SetpointRampRate As Double = 0.0
+
+        ''' <summary>Back-calculation gain (1/Tt); 0 disables the anti-windup correction.</summary>
+        Public Property BackCalculationGain As Double = 0.0
+
+        ''' <summary>Ownership of the manipulated variable.</summary>
+        Public Property Ownership As Interfaces.Enums.ControlOwnership = Interfaces.Enums.ControlOwnership.Local
+
+        ''' <summary>Value written by an external controller, in engineering units.</summary>
+        <Xml.Serialization.XmlIgnore> Public Property ExternalMV As Double = 0.0
+
+        ''' <summary>Local output minus the external MV while in Shadow mode.</summary>
+        <Xml.Serialization.XmlIgnore> Public Property ShadowDeviation As Double = 0.0
+
+        <Xml.Serialization.XmlIgnore> Public Property ShadowDeviationHistory As New List(Of Double)
 
         Public Property OutputMin As Double = -1000.0
 
@@ -731,15 +758,45 @@ Namespace SpecialOps
 
             UpdateVars()
 
+            If m_LastOutputAbs Is Nothing Then m_LastOutputAbs = MVValue
+
             If BaseSP Is Nothing Then BaseSP = Math.Abs(AdjustValue)
 
-            SPHistory.Add(AdjustValue / BaseSP)
+            ' Setpoint ramp: the effective setpoint moves toward the operator value.
+            Dim effectiveSP As Double = AdjustValue
+
+            If SetpointRampRate > 0.0 Then
+
+                If m_RampedSP Is Nothing Then
+                    m_RampedSP = AdjustValue
+                Else
+                    Dim maxStep As Double = SetpointRampRate * timestep
+                    Dim deltaSP As Double = AdjustValue - m_RampedSP.Value
+                    If Math.Abs(deltaSP) <= maxStep Then
+                        m_RampedSP = AdjustValue
+                    Else
+                        m_RampedSP = m_RampedSP.Value + Math.Sign(deltaSP) * maxStep
+                    End If
+                End If
+
+                effectiveSP = m_RampedSP.Value
+
+            Else
+
+                m_RampedSP = AdjustValue
+
+            End If
+
+            If BaseSP Is Nothing OrElse BaseSP = 0.0 Then BaseSP = Math.Abs(effectiveSP)
+            If BaseSP = 0.0 Then BaseSP = 1.0
+
+            SPHistory.Add(effectiveSP / BaseSP)
 
             PVHistory.Add(PVValue / BaseSP)
 
             LastError = CurrentError
 
-            CurrentError = (PVValue - AdjustValue) / BaseSP
+            CurrentError = (PVValue - effectiveSP) / BaseSP
 
             CumulativeError += Math.Abs(CurrentError)
 
@@ -759,7 +816,27 @@ Namespace SpecialOps
 
             If Math.Abs(LastError) > 0.0 Then DTerm = delta_error / timestep
 
-            If Not ManualOverride Then
+            Dim writeMV As Boolean = False
+            Dim outputAbsRaw As Double = 0.0
+
+            If Ownership = Interfaces.Enums.ControlOwnership.External OrElse TrackingMode Then
+
+                ' External/tracking: follow the actual MV and do not write it back.
+                OutputAbs = If(Ownership = Interfaces.Enums.ControlOwnership.External, ExternalMV, MVValue)
+                Output = If(ReverseActing, OutputAbs / BaseSP - 1.0, 1.0 - OutputAbs / BaseSP)
+
+                If Ki <> 0.0 Then
+                    ITerm = (Output - PTerm - Kd * DTerm - Offset / BaseSP) / Ki
+                    If ITerm < -WindupGuard Then
+                        ITerm = -WindupGuard
+                    ElseIf ITerm > WindupGuard Then
+                        ITerm = WindupGuard
+                    End If
+                End If
+
+                m_LastOutputAbs = MVValue
+
+            ElseIf Ownership = Interfaces.Enums.ControlOwnership.Shadow Then
 
                 Output = PTerm + Ki * ITerm + Kd * DTerm + Offset / BaseSP
 
@@ -769,13 +846,17 @@ Namespace SpecialOps
                     OutputAbs = (1.0 + Output) * BaseSP
                 End If
 
-                If OutputAbs > OutputMax Then OutputAbs = OutputMax
+                outputAbsRaw = OutputAbs
 
+                If OutputAbs > OutputMax Then OutputAbs = OutputMax
                 If OutputAbs < OutputMin Then OutputAbs = OutputMin
 
-                MVValue = SystemsOfUnits.Converter.ConvertToSI(ManipulatedObjectData.Units, OutputAbs)
+                ShadowDeviation = OutputAbs - ExternalMV
+                ShadowDeviationHistory.Add(ShadowDeviation)
 
-            Else
+                m_LastOutputAbs = MVValue
+
+            ElseIf Ownership = Interfaces.Enums.ControlOwnership.Manual OrElse ManualOverride Then
 
                 OutputAbs = SystemsOfUnits.Converter.ConvertFromSI(ManipulatedObjectData.Units, MVValue)
 
@@ -785,11 +866,49 @@ Namespace SpecialOps
                     Output = OutputAbs / BaseSP - 1.0
                 End If
 
+                m_LastOutputAbs = MVValue
+
+            Else
+
+                Output = PTerm + Ki * ITerm + Kd * DTerm + Offset / BaseSP
+
+                If Not ReverseActing Then
+                    OutputAbs = (1.0 - Output) * BaseSP
+                Else
+                    OutputAbs = (1.0 + Output) * BaseSP
+                End If
+
+                outputAbsRaw = OutputAbs
+
+                If OutputAbs > OutputMax Then OutputAbs = OutputMax
+                If OutputAbs < OutputMin Then OutputAbs = OutputMin
+
+                If OutputRateLimit > 0.0 AndAlso m_LastOutputAbs IsNot Nothing Then
+                    Dim maxDelta As Double = OutputRateLimit * timestep
+                    If OutputAbs > m_LastOutputAbs.Value + maxDelta Then OutputAbs = m_LastOutputAbs.Value + maxDelta
+                    If OutputAbs < m_LastOutputAbs.Value - maxDelta Then OutputAbs = m_LastOutputAbs.Value - maxDelta
+                End If
+
+                If BackCalculationGain > 0.0 Then
+                    ITerm -= BackCalculationGain * (OutputAbs - outputAbsRaw) * timestep
+                    If ITerm < -WindupGuard Then
+                        ITerm = -WindupGuard
+                    ElseIf ITerm > WindupGuard Then
+                        ITerm = WindupGuard
+                    End If
+                End If
+
+                m_LastOutputAbs = OutputAbs
+
+                MVValue = SystemsOfUnits.Converter.ConvertToSI(ManipulatedObjectData.Units, OutputAbs)
+
+                writeMV = True
+
             End If
 
             MVHistory.Add(Output)
 
-            ManipulatedObject.SetPropertyValue(ManipulatedObjectData.PropertyName, MVValue)
+            If writeMV Then ManipulatedObject.SetPropertyValue(ManipulatedObjectData.PropertyName, MVValue)
 
         End Sub
 
