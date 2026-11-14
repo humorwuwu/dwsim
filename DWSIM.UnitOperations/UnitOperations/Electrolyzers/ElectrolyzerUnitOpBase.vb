@@ -14,6 +14,8 @@ Namespace UnitOperations
 
         Implements IExternalUnitOperation
 
+        Private m_LastResetInput As Double = 0.0
+
         Public Sub New()
             MyBase.New()
             Parameters = New Dictionary(Of String, ElectrolyzerModelParameter)
@@ -84,6 +86,24 @@ Namespace UnitOperations
 
         Public Property StackTemperature As Double
 
+        <Xml.Serialization.XmlIgnore> Public Property TripLatched As Boolean
+
+        <Xml.Serialization.XmlIgnore> Public Property H2inO2HighAlarm As Boolean
+
+        <Xml.Serialization.XmlIgnore> Public Property O2inH2HighAlarm As Boolean
+
+        <Xml.Serialization.XmlIgnore> Public Property StackTemperatureHighAlarm As Boolean
+
+        <Xml.Serialization.XmlIgnore> Public Property LastH2inO2 As Double
+
+        <Xml.Serialization.XmlIgnore> Public Property LastO2inH2 As Double
+
+        <Xml.Serialization.XmlIgnore> Public Property LastStackTemperature As Double
+
+        <Xml.Serialization.XmlIgnore> Public Property LastPressureDifference As Double
+
+        <Xml.Serialization.XmlIgnore> Public Property LastWaterLevel As Double = 100.0
+
         ''' <summary>Adds the default parameter set. Derived classes override the defaults.</summary>
         Public Overridable Sub SetupParameters()
 
@@ -97,6 +117,14 @@ Namespace UnitOperations
             AddParameter("P_stack", "Stack power input", 0.0, "kW")
             AddParameter("I_stack", "Stack current input", 0.0, "A")
             AddParameter("crossover_coeff", "Gas crossover coefficient", 1.0E-5, "mol/s")
+            AddParameter("H2inO2_alarm", "H2-in-O2 high alarm", 2.0, "%")
+            AddParameter("H2inO2_trip", "H2-in-O2 trip", 4.0, "%")
+            AddParameter("O2inH2_alarm", "O2-in-H2 high alarm", 2.0, "%")
+            AddParameter("StackTemperature_trip", "Stack temperature trip", 363.15, "K")
+            AddParameter("dP_max", "Maximum cathode-anode pressure difference", 30.0, "bar")
+            AddParameter("WaterLevel_trip", "Low-low water level trip", 5.0, "%")
+            AddParameter("WaterLevel", "Water level input", 100.0, "%")
+            AddParameter("Reset", "Trip reset input (1 = reset)", 0.0, "")
             AddParameter("C_stack", "Stack heat capacity", 1.0E6, "J/K")
             AddParameter("m_stack", "Stack mass", 500.0, "kg")
             AddParameter("Cp_stack", "Stack specific heat", 500.0, "J/kgK")
@@ -131,7 +159,8 @@ Namespace UnitOperations
                 "Reversible Voltage", "Thermoneutral Voltage", "Activation Overpotential",
                 "Ohmic Overpotential", "Concentration Overpotential", "Faraday Efficiency",
                 "H2 Purity", "H2 in O2", "O2 in H2", "Specific Energy Consumption",
-                "Efficiency HHV", "Efficiency LHV", "Cooling Duty", "Stack Temperature"}
+                "Efficiency HHV", "Efficiency LHV", "Cooling Duty", "Stack Temperature",
+                "H2 in O2 High Alarm", "O2 in H2 High Alarm", "Stack Temperature High Alarm", "Trip Latched"}
 
         End Function
 
@@ -157,6 +186,10 @@ Namespace UnitOperations
                 Case "Efficiency LHV" : Return EfficiencyLHV
                 Case "Cooling Duty" : Return CoolingDuty
                 Case "Stack Temperature" : Return StackTemperature
+                Case "H2 in O2 High Alarm" : Return If(H2inO2HighAlarm, 1.0, 0.0)
+                Case "O2 in H2 High Alarm" : Return If(O2inH2HighAlarm, 1.0, 0.0)
+                Case "Stack Temperature High Alarm" : Return If(StackTemperatureHighAlarm, 1.0, 0.0)
+                Case "Trip Latched" : Return If(TripLatched, 1.0, 0.0)
                 Case Else : Return 0.0
             End Select
 
@@ -189,7 +222,63 @@ Namespace UnitOperations
             Return New ModelPEM_Springer()
         End Function
 
+        ''' <summary>
+        ''' Updates alarms and latches a trip when a safety limit is exceeded. Called every
+        ''' calculation and available to headless tests and the PLC bridge.
+        ''' </summary>
+        Public Sub UpdateInterlocks(h2inO2 As Double, o2inH2 As Double, stackTemperature As Double,
+                                    cathodeMinusAnodePressure As Double, waterLevelPercent As Double)
+
+            LastH2inO2 = h2inO2
+            LastO2inH2 = o2inH2
+            LastStackTemperature = stackTemperature
+            LastPressureDifference = cathodeMinusAnodePressure
+            LastWaterLevel = waterLevelPercent
+
+            H2inO2HighAlarm = h2inO2 > ParameterValue("H2inO2_alarm", 2.0)
+            O2inH2HighAlarm = o2inH2 > ParameterValue("O2inH2_alarm", 2.0)
+            StackTemperatureHighAlarm = stackTemperature > ParameterValue("StackTemperature_trip", 363.15)
+
+            If h2inO2 > ParameterValue("H2inO2_trip", 4.0) OrElse
+               stackTemperature > ParameterValue("StackTemperature_trip", 363.15) OrElse
+               Math.Abs(cathodeMinusAnodePressure) > ParameterValue("dP_max", 30.0) OrElse
+               waterLevelPercent < ParameterValue("WaterLevel_trip", 5.0) Then
+                TripLatched = True
+            End If
+
+        End Sub
+
+        ''' <summary>Clears a latched trip when the last measurements are safe. Returns false if unsafe.</summary>
+        Public Function ResetTrip() As Boolean
+
+            Dim unsafeCondition = LastH2inO2 > ParameterValue("H2inO2_trip", 4.0) OrElse
+                LastStackTemperature > ParameterValue("StackTemperature_trip", 363.15) OrElse
+                Math.Abs(LastPressureDifference) > ParameterValue("dP_max", 30.0) OrElse
+                LastWaterLevel < ParameterValue("WaterLevel_trip", 5.0)
+
+            If unsafeCondition Then Return False
+
+            TripLatched = False
+            Return True
+
+        End Function
+
         Public Overrides Sub Calculate(Optional args As Object = Nothing)
+
+            Dim resetInput = ParameterValue("Reset", 0.0)
+            If resetInput > 0.0 AndAlso m_LastResetInput <= 0.0 Then ResetTrip()
+            m_LastResetInput = resetInput
+
+            If TripLatched Then
+                Power = 0.0
+                Current = 0.0
+                CurrentDensity = 0.0
+                StackVoltage = 0.0
+                CellVoltage = 0.0
+                CoolingDuty = 0.0
+                Me.Calculated = True
+                Return
+            End If
 
             Dim msin = GetInletMaterialStream(0)
             If msin Is Nothing Then Throw New Exception("Connect the water inlet stream.")
@@ -324,6 +413,19 @@ Namespace UnitOperations
             H2inO2 = 100.0 * crossover / Math.Max(o2Produced + crossover, 1.0E-12)
             O2inH2 = 100.0 * crossover / Math.Max(nH2 + crossover, 1.0E-12)
             H2Purity = 100.0 - O2inH2
+
+            UpdateInterlocks(H2inO2, O2inH2, T, pCat - pAn, ParameterValue("WaterLevel", 100.0))
+
+            If TripLatched Then
+                Power = 0.0
+                Current = 0.0
+                CurrentDensity = 0.0
+                StackVoltage = 0.0
+                CellVoltage = 0.0
+                CoolingDuty = 0.0
+                Me.Calculated = True
+                Return
+            End If
 
             Dim N0 = msin.Phases(0).Compounds.Values.Select(Function(c) c.MolarFlow.GetValueOrDefault()).ToList()
             Dim Nf As New List(Of Double)(N0)

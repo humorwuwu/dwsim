@@ -40,6 +40,8 @@ Namespace UnitOperations
             AddParameter("m_stack", "Stack mass", 1500.0, "kg")
             AddParameter("Cp_stack", "Stack specific heat", 500.0, "J/kgK")
             AddParameter("U_loss_area", "Stack heat loss coefficient", 100.0, "W/K")
+            AddParameter("StackTemperature_trip", "Stack temperature trip", 368.15, "K")
+            AddParameter("dP_max", "Maximum cathode-anode pressure difference", 16.0, "bar")
 
             StackTemperature = ParameterValue("T_op", 353.15)
 

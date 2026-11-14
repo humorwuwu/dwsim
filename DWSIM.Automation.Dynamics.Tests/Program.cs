@@ -54,9 +54,34 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestOwnership(flowsheet);
             TestElectrolyzerDiscovery();
             TestElectrochemicalModel();
+            TestInterlocks();
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
+        }
+
+        private static void TestInterlocks()
+        {
+            var pem = new PEMElectrolyzer();
+
+            pem.UpdateInterlocks(2.5, 0.1, 350.0, 5.0, 100.0);
+            Check(pem.H2inO2HighAlarm, "H2-in-O2 high alarm");
+            pem.UpdateInterlocks(1.0, 0.1, 350.0, 5.0, 100.0);
+            Check(!pem.H2inO2HighAlarm, "H2-in-O2 alarm auto-resets");
+
+            pem.UpdateInterlocks(4.5, 0.1, 350.0, 5.0, 100.0);
+            Check(pem.TripLatched, "H2-in-O2 trip latches");
+            Check(!pem.ResetTrip(), "reset refused while H2-in-O2 is high");
+
+            pem.UpdateInterlocks(0.5, 0.1, 350.0, 5.0, 100.0);
+            Check(pem.ResetTrip(), "reset accepted when safe");
+            Check(!pem.TripLatched, "trip cleared");
+
+            pem.UpdateInterlocks(0.1, 0.1, 365.0, 5.0, 100.0);
+            Check(pem.TripLatched && pem.StackTemperatureHighAlarm, "stack temperature trip");
+
+            pem.UpdateInterlocks(0.1, 0.1, 350.0, 5.0, 100.0);
+            Check(pem.ResetTrip(), "second reset accepted");
         }
 
         private static void TestElectrochemicalModel()
