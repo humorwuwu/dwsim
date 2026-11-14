@@ -55,9 +55,24 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestElectrolyzerDiscovery();
             TestElectrochemicalModel();
             TestInterlocks();
+            TestDynamicSupport();
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
+        }
+
+        private static void TestDynamicSupport()
+        {
+            var pem = new PEMElectrolyzer();
+            Check(pem.SupportsDynamicMode && pem.HasPropertiesForDynamicMode, "dynamic support");
+            pem.CreateDynamicProperties();
+            Check(pem.GetDynamicProperty("Stack Temperature") != null, "dynamic stack temperature property");
+
+            var heated = pem.IntegrateStackTemperature(353.15, 60.0, 100000.0, 1.0, 4180.0, 298.15, 298.15);
+            Check(heated > 353.15 && heated < 400.0, "stack heats up");
+
+            var cooled = pem.IntegrateStackTemperature(353.15, 60.0, 0.0, 1.0, 4180.0, 298.15, 298.15);
+            Check(cooled < 353.15 && cooled > 298.15, "stack cools down");
         }
 
         private static void TestInterlocks()

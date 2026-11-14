@@ -29,6 +29,10 @@ Namespace UnitOperations
 
         Public Overrides ReadOnly Property MobileCompatible As Boolean = False
 
+        Public Overrides ReadOnly Property SupportsDynamicMode As Boolean = True
+
+        Public Overrides ReadOnly Property HasPropertiesForDynamicMode As Boolean = True
+
         Public Overrides Property ComponentName As String = GetDisplayName()
 
         Public Overrides Property ComponentDescription As String = GetDisplayDescription()
@@ -222,6 +226,91 @@ Namespace UnitOperations
             Return New ModelPEM_Springer()
         End Function
 
+        Public Overrides Sub CreateDynamicProperties()
+
+            AddDynamicProperty("Stack Temperature", "Current stack temperature", 353.15, UnitOfMeasure.temperature, 1.0.GetType())
+            AddDynamicProperty("Cooling Water Flow", "Coolant mass flow", 0.0, UnitOfMeasure.massflow, 1.0.GetType())
+            AddDynamicProperty("Coolant Inlet Temperature", "Coolant supply temperature", 298.15, UnitOfMeasure.temperature, 1.0.GetType())
+            AddDynamicProperty("Coolant Specific Heat", "Coolant specific heat capacity", 4180.0, UnitOfMeasure.heatCapacityCp, 1.0.GetType())
+            AddDynamicProperty("Ambient Temperature", "Ambient temperature", 298.15, UnitOfMeasure.temperature, 1.0.GetType())
+            AddDynamicProperty("H2 in O2", "Vol% H2 in oxygen stream", 0.0, UnitOfMeasure.none, 1.0.GetType())
+            AddDynamicProperty("O2 in H2", "Vol% O2 in hydrogen stream", 0.0, UnitOfMeasure.none, 1.0.GetType())
+            AddDynamicProperty("Enable Thermal Model", "Enable stack thermal inertia", 1.0, UnitOfMeasure.none, True.GetType())
+
+        End Sub
+
+        ''' <summary>
+        ''' Integrates the lumped stack energy balance for one model step with internal
+        ''' sub-stepping, so a large IntegrationStep stays stable.
+        ''' </summary>
+        Public Function IntegrateStackTemperature(Tstack As Double, timestep As Double, qGenW As Double,
+                                                  mCoolant As Double, cpCoolant As Double,
+                                                  TcoolIn As Double, TAmbient As Double) As Double
+
+            Dim Cstack = Math.Max(ParameterValue("C_stack", 1.0E6), 1.0)
+            Dim UA = Math.Max(ParameterValue("U_loss_area", 50.0), 0.0)
+            Dim mcp = Math.Max(mCoolant, 0.0) * Math.Max(cpCoolant, 1.0)
+
+            Dim tau = Cstack / Math.Max(UA + mcp, 1.0E-9)
+            Dim dtSub = Math.Min(timestep, tau / 10.0)
+            Dim nSub = Math.Max(1, CInt(Math.Ceiling(timestep / Math.Max(dtSub, 1.0E-9))))
+            Dim dt = timestep / nSub
+
+            Dim T = Tstack
+
+            For k = 1 To nSub
+                T = (Cstack * T + dt * (qGenW + mcp * TcoolIn + UA * TAmbient)) / (Cstack + dt * (UA + mcp))
+            Next
+
+            Return T
+
+        End Function
+
+        Public Overrides Sub RunDynamicModel()
+
+            Dim schedule = FlowSheet.DynamicsManager.ScheduleList(FlowSheet.DynamicsManager.CurrentSchedule)
+            Dim integrator = FlowSheet.DynamicsManager.IntegratorList(schedule.CurrentIntegrator)
+
+            Dim timestep = integrator.IntegrationStep.TotalSeconds
+            If integrator.RealTime Then timestep = Convert.ToDouble(integrator.RealTimeStepMs) / 1000.0
+            If timestep <= 0.0 Then Return
+
+            Dim thermalProperty = GetDynamicProperty("Enable Thermal Model")
+            Dim enableThermal = If(thermalProperty IsNot Nothing, Convert.ToBoolean(thermalProperty), True)
+
+            If enableThermal Then
+
+                Dim Tstack = StackTemperature
+                Dim propertyValue = GetDynamicProperty("Stack Temperature")
+                If propertyValue IsNot Nothing Then Tstack = Convert.ToDouble(propertyValue)
+
+                Dim mCoolant = 0.0
+                propertyValue = GetDynamicProperty("Cooling Water Flow")
+                If propertyValue IsNot Nothing Then mCoolant = Convert.ToDouble(propertyValue)
+
+                Dim TcoolIn = 298.15
+                propertyValue = GetDynamicProperty("Coolant Inlet Temperature")
+                If propertyValue IsNot Nothing Then TcoolIn = Convert.ToDouble(propertyValue)
+
+                Dim cpCoolant = 4180.0
+                propertyValue = GetDynamicProperty("Coolant Specific Heat")
+                If propertyValue IsNot Nothing Then cpCoolant = Convert.ToDouble(propertyValue)
+
+                Dim TAmbient = 298.15
+                propertyValue = GetDynamicProperty("Ambient Temperature")
+                If propertyValue IsNot Nothing Then TAmbient = Convert.ToDouble(propertyValue)
+
+                StackTemperature = IntegrateStackTemperature(Tstack, timestep, CoolingDuty * 1000.0,
+                                                             mCoolant, cpCoolant, TcoolIn, TAmbient)
+
+            End If
+
+            SetDynamicProperty("Stack Temperature", StackTemperature)
+            SetDynamicProperty("H2 in O2", H2inO2)
+            SetDynamicProperty("O2 in H2", O2inH2)
+
+        End Sub
+
         ''' <summary>
         ''' Updates alarms and latches a trip when a safety limit is exceeded. Called every
         ''' calculation and available to headless tests and the PLC bridge.
@@ -311,6 +400,9 @@ Namespace UnitOperations
             pp.CurrentMaterialStream = msin
 
             Dim T = msin.GetTemperature()
+
+            Dim thermalProperty = GetDynamicProperty("Enable Thermal Model")
+            If thermalProperty IsNot Nothing AndAlso Convert.ToBoolean(thermalProperty) Then T = StackTemperature
 
             Dim DGf = pp.AUX_DELGig_RT(298.15, T, New String() {wid, hid, "Oxygen"}, New Double() {-1.0, 1.0, 0.5}, 0) * 8.314 * T / 1000.0
             Dim DHf = pp.AUX_DELHig_RT(298.15, T, New String() {wid, hid, "Oxygen"}, New Double() {-1.0, 1.0, 0.5}, 0) * 8.314 * T / 1000.0
