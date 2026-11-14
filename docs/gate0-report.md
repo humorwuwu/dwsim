@@ -15,12 +15,14 @@
 ## V-2 能否编译并运行现有版本（Windows）
 
 - 命令：`scripts/build.ps1 -Configuration Debug|Release -Platform x64`
-- 结果：**编译 PASS，GUI 启动待人工验证。**
+- 结果：**编译 PASS，GUI 启动冒烟 PASS，样例打开待人工验证。**
   - Debug|x64：CI run 43595129121，成功。
   - Release|x64：CI run 43595129121，成功；产物 `DWSIM\bin\x64\Release\DWSIM.exe` 由脚本校验存在。
-  - Release artifact：`h2sim-windows-x64`（约 293 MB，未压缩）。
+  - Release artifact：`h2sim-windows-x64`（`DistPackages\Windows\`，约 293 MB，未压缩）。
+  - GUI 启动：CI run 43596577971 在 `DistPackages\Windows` 里启动 `DWSIM.exe`，进程存活 20 s 后由脚本结束。
+  - 动态样例：T-3.1 的 headless 测试加载 `Dynamic Simulation - Water Tank Level Control.dwxmz`，运行 60 s / 12 步通过。
 - 事实修正：上游 sln **没有** `Release|x64` solution 配置；`ReleaseWinMac|x64` 映射到项目 `Release|x64`，产物仍在 `bin\x64\Release`。
-- 未验证：启动主窗口、打开 `PlatformFiles/Common/samples/Water Electrolyzer.dwxmz`。CI 无交互桌面，需 Windows 机器手动确认。
+- 未验证：在 GUI 中手动打开 `PlatformFiles/Common/samples/Water Electrolyzer.dwxmz`。需要 Windows 桌面。
 
 ## V-3 macOS 上 net462 + Mono 能否运行
 
