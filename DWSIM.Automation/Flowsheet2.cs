@@ -37,6 +37,9 @@ namespace DWSIM.Automation
 
             LoadSpreadsheetData = new Action<XDocument>((xdoc) =>
             {
+                // headless clones are created without a spreadsheet workbook
+                if (Spreadsheet == null) return;
+
                 if (xdoc.Element("DWSIM_Simulation_Data").Element("Spreadsheet") != null)
                 {
                     var rgfdataelement = xdoc.Element("DWSIM_Simulation_Data").Element("Spreadsheet").Element("RGFData");
@@ -63,6 +66,8 @@ namespace DWSIM.Automation
 
             SaveSpreadsheetData = new Action<XDocument>((xdoc) =>
             {
+                if (Spreadsheet == null) return;
+
                 xdoc.Element("DWSIM_Simulation_Data").Add(new XElement("Spreadsheet"));
                 xdoc.Element("DWSIM_Simulation_Data").Element("Spreadsheet").Add(new XElement("RGFData"));
                 var tmpfile = SharedClasses.Utility.GetTempFileName();
