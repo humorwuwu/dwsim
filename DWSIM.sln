@@ -217,6 +217,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DWSIM.Controls.OutlookGrid"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DWSIM.UI.Desktop.GTK3", "DWSIM.UI.Desktop.GTK3\DWSIM.UI.Desktop.GTK3.csproj", "{E8CAC254-E5C5-48B7-9A75-E2D41A3A95A1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DWSIM.Automation.Dynamics", "DWSIM.Automation.Dynamics\DWSIM.Automation.Dynamics.csproj", "{04348922-C1B2-495F-8454-08CD25461A41}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DWSIM.Automation.Dynamics.Tests", "DWSIM.Automation.Dynamics.Tests\DWSIM.Automation.Dynamics.Tests.csproj", "{957125B4-6639-4EF5-AD95-FD794699EA1A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1784,6 +1788,54 @@ Global
 		{E8CAC254-E5C5-48B7-9A75-E2D41A3A95A1}.ReleaseWinMacP|x64.Build.0 = Release|Any CPU
 		{E8CAC254-E5C5-48B7-9A75-E2D41A3A95A1}.ReleaseWinMacP|x86.ActiveCfg = Release|Any CPU
 		{E8CAC254-E5C5-48B7-9A75-E2D41A3A95A1}.ReleaseWinMacP|x86.Build.0 = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.Debug|x64.ActiveCfg = Debug|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.Debug|x64.Build.0 = Debug|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.Debug|x86.Build.0 = Debug|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseMac|Any CPU.ActiveCfg = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseMac|Any CPU.Build.0 = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseMac|x64.ActiveCfg = Release|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseMac|x64.Build.0 = Release|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseMac|x86.ActiveCfg = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseMac|x86.Build.0 = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMac|Any CPU.ActiveCfg = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMac|Any CPU.Build.0 = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMac|x64.ActiveCfg = Release|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMac|x64.Build.0 = Release|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMac|x86.ActiveCfg = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMac|x86.Build.0 = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMacP|Any CPU.ActiveCfg = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMacP|Any CPU.Build.0 = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMacP|x64.ActiveCfg = Release|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMacP|x64.Build.0 = Release|x64
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMacP|x86.ActiveCfg = Release|Any CPU
+		{04348922-C1B2-495F-8454-08CD25461A41}.ReleaseWinMacP|x86.Build.0 = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.Debug|x64.ActiveCfg = Debug|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.Debug|x64.Build.0 = Debug|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.Debug|x86.Build.0 = Debug|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseMac|Any CPU.ActiveCfg = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseMac|Any CPU.Build.0 = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseMac|x64.ActiveCfg = Release|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseMac|x64.Build.0 = Release|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseMac|x86.ActiveCfg = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseMac|x86.Build.0 = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMac|Any CPU.ActiveCfg = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMac|Any CPU.Build.0 = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMac|x64.ActiveCfg = Release|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMac|x64.Build.0 = Release|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMac|x86.ActiveCfg = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMac|x86.Build.0 = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMacP|Any CPU.ActiveCfg = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMacP|Any CPU.Build.0 = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMacP|x64.ActiveCfg = Release|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMacP|x64.Build.0 = Release|x64
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMacP|x86.ActiveCfg = Release|Any CPU
+		{957125B4-6639-4EF5-AD95-FD794699EA1A}.ReleaseWinMacP|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

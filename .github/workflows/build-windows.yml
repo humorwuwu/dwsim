@@ -45,3 +45,16 @@ jobs:
           name: h2sim-windows-x64
           path: DistPackages/Windows/
           if-no-files-found: error
+
+      - name: Dynamics headless smoke test
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          Copy-Item DWSIM.Automation.Dynamics.Tests\bin\x64\Release\* DistPackages\Windows\ -Force
+          Push-Location DistPackages\Windows
+          try {
+            .\DWSIM.Automation.Dynamics.Tests.exe "samples\Dynamic Simulation - Water Tank Level Control.dwxmz"
+            if ($LASTEXITCODE -ne 0) { throw "dynamics smoke test failed ($LASTEXITCODE)" }
+          } finally {
+            Pop-Location
+          }

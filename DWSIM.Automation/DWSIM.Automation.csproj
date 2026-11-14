@@ -239,4 +239,11 @@ xcopy "$(SolutionDir)DWSIM.Automation\bin\Release\*" "$(SolutionDir)DistPackages
   <Target Name="AfterBuild">
   </Target>
   -->
+  <ItemGroup>
+    <ProjectReference Include="..\DWSIM.Automation.Dynamics\DWSIM.Automation.Dynamics.csproj">
+      <Project>{04348922-C1B2-495F-8454-08CD25461A41}</Project>
+      <Name>DWSIM.Automation.Dynamics</Name>
+      <Private>False</Private>
+    </ProjectReference>
+  </ItemGroup>
 </Project>
