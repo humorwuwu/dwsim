@@ -52,13 +52,13 @@ namespace DWSIM.H2sim.Io
 
         private static double Scale(double raw, Signal signal)
         {
-            return raw * signal.Scale + signal.Offset;
+            if (signal.Scale == 0.0) throw new InvalidOperationException("Signal scale is zero.");
+            return (raw - signal.Offset) / signal.Scale;
         }
 
         private static double Unscale(double engineering, Signal signal)
         {
-            if (signal.Scale == 0.0) throw new InvalidOperationException("Signal scale is zero.");
-            return (engineering - signal.Offset) / signal.Scale;
+            return engineering * signal.Scale + signal.Offset;
         }
 
         private static void RequireWords(ushort[] registers, int count)

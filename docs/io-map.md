@@ -18,7 +18,7 @@ H2sim 作为 **Modbus TCP 从站（server）**，OpenPLC v4 用 `modbus_master` 
 
 ## 数据类型与缩放
 
-工程值 = 原始值 × `Scale` + `Offset`。
+原始值 = 工程值 × `Scale` + `Offset`；工程值 = (原始值 − `Offset`) / `Scale`。
 
 - OpenPLC v4 的 `modbus_slave` 分段没有 REAL 段，**模拟量优先用 `Int16`**，例如温度 85.3 °C 用 `Scale=10` 存成 853。
 - `Int32` / `Float32` 支持 `WordOrder`：`ABCD`（默认，高字在前）、`CDAB`、`BADC`、`DCBA`。
