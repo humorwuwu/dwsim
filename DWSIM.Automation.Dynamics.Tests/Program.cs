@@ -6,6 +6,7 @@ using DWSIM.H2sim.Io;
 using DWSIM.Interfaces;
 using DWSIM.Interfaces.Enums;
 using DWSIM.UnitOperations.SpecialOps;
+using DWSIM.UnitOperations.UnitOperations;
 
 namespace DWSIM.Automation.Dynamics.Tests
 {
@@ -51,9 +52,29 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
 
             TestOwnership(flowsheet);
+            TestElectrolyzerDiscovery();
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
+        }
+
+        private static void TestElectrolyzerDiscovery()
+        {
+            var assembly = typeof(PEMElectrolyzer).Assembly;
+            var unitOperations = DWSIM.SharedClasses.Utility.GetUnitOperations(assembly);
+
+            Check(unitOperations.Any(u => u.Description == "PEM Electrolyzer"), "PEM electrolyzer is discovered");
+            Check(unitOperations.Any(u => u.Description == "Alkaline Electrolyzer"), "alkaline electrolyzer is discovered");
+
+            var pem = new PEMElectrolyzer();
+            Check(pem.Prefix == "PEMEL-" && !pem.IsSource, "PEM electrolyzer metadata");
+            Check(pem.GetPropertyUnit("Cell Voltage") == "V", "cell voltage unit");
+            Check(pem.Parameters.ContainsKey("A_cell"), "default parameter set");
+
+            pem.Parameters["A_cell"].Value = 1234.0;
+            var clone = new PEMElectrolyzer();
+            clone.LoadData(pem.SaveData());
+            Check(Math.Abs(clone.Parameters["A_cell"].Value - 1234.0) < 1e-9, "parameter round-trip");
         }
 
         private static void TestOwnership(IFlowsheet flowsheet)
