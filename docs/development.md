@@ -21,10 +21,12 @@ powershell -ExecutionPolicy Bypass -File scripts/build.ps1
 
 ```powershell
 .\.nuget\NuGet.exe restore DWSIM.sln -PackagesDirectory packages
-msbuild DWSIM.sln /p:Configuration=Release /p:Platform=x64 /m
+msbuild DWSIM.sln /p:Configuration=ReleaseWinMac /p:Platform=x64 /m
 ```
 
 产物：`DWSIM\bin\x64\Release\DWSIM.exe`。
+
+注意：上游 sln 没有 `Release|x64` 这个 solution 配置；`ReleaseWinMac|x64` 映射到项目 `Release|x64`，所以产物目录仍是 `bin\x64\Release`。
 
 注意：本仓库是 `packages.config` + `HintPath`，**没有** MSBuild restore target，必须用 `nuget restore`。
 

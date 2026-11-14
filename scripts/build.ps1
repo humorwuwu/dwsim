@@ -1,5 +1,6 @@
 # 构建 H2sim（Windows / GitHub Actions windows-latest）
 param(
+    [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
     [string]$Platform = "x64"
 )
@@ -32,7 +33,9 @@ $nuget = Resolve-NuGet
 if ($LASTEXITCODE -ne 0) { throw "NuGet 还原失败（exit $LASTEXITCODE）" }
 
 $msbuild = Resolve-MSBuild
-& $msbuild DWSIM.sln "/p:Configuration=$Configuration" "/p:Platform=$Platform" /m /v:m /nologo
+# 上游 sln 没有 Release|x64 这个 solution 配置；ReleaseWinMac|x64 映射到项目 Release|x64
+$solutionConfig = if ($Configuration -eq "Release") { "ReleaseWinMac" } else { $Configuration }
+& $msbuild DWSIM.sln "/p:Configuration=$solutionConfig" "/p:Platform=$Platform" /m /v:m /nologo
 if ($LASTEXITCODE -ne 0) { throw "编译失败（exit $LASTEXITCODE）" }
 
 $exe = Join-Path $root "DWSIM\bin\$Platform\$Configuration\DWSIM.exe"

@@ -26,8 +26,10 @@ H2sim 是 DWSIM 9.0.5 的 GPLv3 派生仓库，目标改造为「电解水制氢
 
   ```powershell
   .\.nuget\NuGet.exe restore DWSIM.sln -PackagesDirectory packages
-  msbuild DWSIM.sln /p:Configuration=Release /p:Platform=x64 /m
+  msbuild DWSIM.sln /p:Configuration=ReleaseWinMac /p:Platform=x64 /m
   ```
+
+  上游 sln 没有 `Release|x64` 这个 solution 配置；`ReleaseWinMac|x64` 映射到项目 `Release|x64`，产物仍在 `bin\x64\Release`。
 
 - 构建产物：`DWSIM\bin\x64\Release\DWSIM.exe`。
 - 目标框架：全仓 .NET Framework 4.6.2（少数 4.6.1/4.8）。**不要引入只支持 netstandard2.1 / net6.0+ 的包**。
