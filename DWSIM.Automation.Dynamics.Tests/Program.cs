@@ -53,9 +53,41 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             TestOwnership(flowsheet);
             TestElectrolyzerDiscovery();
+            TestElectrochemicalModel();
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
+        }
+
+        private static void TestElectrochemicalModel()
+        {
+            var model = new ModelPEM_Springer { U_rev = 1.23, U_tn = 1.48 };
+            var low = model.CellVoltage(0.1, 353.15, 30.0, 2.0);
+            var high = model.CellVoltage(1.0, 353.15, 30.0, 2.0);
+
+            Check(high.U_cell > low.U_cell, "polarization curve is monotonic");
+            Check(Math.Abs(high.U_cell - (high.U_ocv + high.U_act + high.U_ohm + high.U_conc)) < 1e-9, "voltage breakdown adds up");
+
+            var calculator = new ElectrolyzerCalculator
+            {
+                Model = model,
+                A_cell = 1000.0,
+                N_cells = 182.0,
+                i_min = 0.25,
+                i_max = 2.5,
+                T = 353.15,
+                pCat = 30.0,
+                pAn = 2.0
+            };
+
+            const double targetPower = 500.0;
+            var currentDensity = calculator.CurrentForPower(targetPower);
+            Check(Math.Abs(calculator.PowerAt(currentDensity) - targetPower) / targetPower < 1e-4, "power/current closure");
+            Check(calculator.HydrogenMolarFlow(currentDensity) > 0.0, "positive hydrogen flow");
+            Check(calculator.SpecificEnergyConsumption(targetPower, currentDensity) > 0.0, "positive SEC");
+
+            var alkaline = new AlkalineElectrolyzer();
+            Check(alkaline.CreateElectrochemicalModel() is ModelAlkaline_SemiEmpirical, "alkaline model factory");
         }
 
         private static void TestElectrolyzerDiscovery()

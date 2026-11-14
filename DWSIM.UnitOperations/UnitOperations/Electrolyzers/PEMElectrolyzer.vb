@@ -15,6 +15,10 @@ Namespace UnitOperations
 
         Public Overrides ReadOnly Property Prefix As String = "PEMEL-"
 
+        Public Overrides Function CreateElectrochemicalModel() As IElectrochemicalModel
+            Return New ModelPEM_Springer()
+        End Function
+
         Public Overrides Sub SetupParameters()
 
             MyBase.SetupParameters()

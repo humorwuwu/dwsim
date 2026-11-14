@@ -741,6 +741,8 @@
     <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerModelParameter.vb" />
     <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerUnitOpBase.vb" />
     <Compile Include="UnitOperations\Electrolyzers\IElectrochemicalModel.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\ModelAlkaline_SemiEmpirical.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\ModelPEM_Springer.vb" />
     <Compile Include="UnitOperations\Electrolyzers\PEMElectrolyzer.vb" />
     <Compile Include="UnitOperations\Electrolyzers\VoltageBreakdown.vb" />
     <Compile Include="UnitOperations\CleanEnergies\WindTurbine.vb" />

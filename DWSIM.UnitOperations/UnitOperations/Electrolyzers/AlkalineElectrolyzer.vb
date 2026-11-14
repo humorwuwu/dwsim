@@ -15,6 +15,10 @@ Namespace UnitOperations
 
         Public Overrides ReadOnly Property Prefix As String = "ALKEL-"
 
+        Public Overrides Function CreateElectrochemicalModel() As IElectrochemicalModel
+            Return New ModelAlkaline_SemiEmpirical()
+        End Function
+
         Public Overrides Sub SetupParameters()
 
             MyBase.SetupParameters()

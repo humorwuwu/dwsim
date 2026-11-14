@@ -93,6 +93,10 @@ Namespace UnitOperations
             AddParameter("P_an", "Anode pressure", 1.0, "bar")
             AddParameter("T_op", "Operating temperature", 353.15, "K")
             AddParameter("etaF_ref", "Reference Faraday efficiency", 0.99, "")
+            AddParameter("SetpointMode", "0 = power input, 1 = current input", 0.0, "")
+            AddParameter("P_stack", "Stack power input", 0.0, "kW")
+            AddParameter("I_stack", "Stack current input", 0.0, "A")
+            AddParameter("crossover_coeff", "Gas crossover coefficient", 1.0E-5, "mol/s")
             AddParameter("C_stack", "Stack heat capacity", 1.0E6, "J/K")
             AddParameter("m_stack", "Stack mass", 500.0, "kg")
             AddParameter("Cp_stack", "Stack specific heat", 500.0, "J/kgK")
@@ -180,9 +184,227 @@ Namespace UnitOperations
 
         End Function
 
+        ''' <summary>Creates the cell voltage model. Derived classes choose PEM or alkaline.</summary>
+        Public Overridable Function CreateElectrochemicalModel() As IElectrochemicalModel
+            Return New ModelPEM_Springer()
+        End Function
+
         Public Overrides Sub Calculate(Optional args As Object = Nothing)
 
-            ' T-1.2 replaces this placeholder with the electrochemical model.
+            Dim msin = GetInletMaterialStream(0)
+            If msin Is Nothing Then Throw New Exception("Connect the water inlet stream.")
+
+            Dim msout1 = GetOutletMaterialStream(0)
+            Dim msout2 = GetOutletMaterialStream(1)
+            If msout1 Is Nothing OrElse msout2 Is Nothing Then
+                Throw New Exception("Connect both gas outlet streams.")
+            End If
+
+            Dim names = msin.Phases(0).Compounds.Keys.ToList()
+
+            Dim wid, hid As String
+
+            If names.Contains("HeavyWater") Then
+                If Not names.Contains("Deuterium") Then Throw New Exception("Needs Deuterium compound.")
+                wid = "HeavyWater"
+                hid = "Deuterium"
+            Else
+                If Not names.Contains("Water") Then Throw New Exception("Needs Water compound.")
+                If Not names.Contains("Hydrogen") Then Throw New Exception("Needs Hydrogen compound.")
+                wid = "Water"
+                hid = "Hydrogen"
+            End If
+
+            If Not names.Contains("Oxygen") Then Throw New Exception("Needs Oxygen compound.")
+
+            Dim pp = DirectCast(PropertyPackage, DWSIM.Thermodynamics.PropertyPackages.PropertyPackage)
+            If pp Is Nothing Then Throw New Exception("A property package is required.")
+            pp.CurrentMaterialStream = msin
+
+            Dim T = msin.GetTemperature()
+
+            Dim DGf = pp.AUX_DELGig_RT(298.15, T, New String() {wid, hid, "Oxygen"}, New Double() {-1.0, 1.0, 0.5}, 0) * 8.314 * T / 1000.0
+            Dim DHf = pp.AUX_DELHig_RT(298.15, T, New String() {wid, hid, "Oxygen"}, New Double() {-1.0, 1.0, 0.5}, 0) * 8.314 * T / 1000.0
+
+            Dim mw = msin.Phases(0).Compounds(wid).ConstantProperties.Molar_Weight
+
+            DHf += pp.AUX_HVAPi(wid, T) * mw / 1000.0
+
+            Dim S_water = -203.606 * Math.Log(T / 1000) + 1523.29 * T / 1000 - 3196.413 * (T / 1000) ^ 2 / 2 + 2474.455 * (T / 1000) ^ 3 / 3 - 3.855326 / (2 * (T / 1000) ^ 2) - 488.7163
+            Dim S_hydrogen = 33.066178 * Math.Log(T / 1000) - 11.363417 * T / 1000 + 11.432816 * (T / 1000) ^ 2 / 2 - 2.772874 * (T / 1000) ^ 3 / 3 + 0.158558 / (2 * (T / 1000) ^ 2) + 172.707974
+            Dim S_oxygen = 31.32234 * Math.Log(T / 1000) - 20.23531 * T / 1000 + 57.86644 * (T / 1000) ^ 2 / 2 - 36.50624 * (T / 1000) ^ 3 / 3 + 0.007374 / (2 * (T / 1000) ^ 2) + 246.7945
+
+            DGf = DHf + T * (S_water - (0.5 * S_oxygen + S_hydrogen)) / 1000.0
+
+            Dim U_rev = DGf * 1000.0 / (2.0 * 96485.3365)
+            Dim U_tn = DHf * 1000.0 / (2.0 * 96485.3365)
+
+            Dim model = CreateElectrochemicalModel()
+            model.U_rev = U_rev
+            model.U_tn = U_tn
+
+            Dim A_cell = ParameterValue("A_cell", 1000.0)
+            Dim N_cells = Math.Max(1.0, ParameterValue("N_cells", 1.0))
+            Dim iMax = Math.Max(1.0E-6, ParameterValue("i_max", 2.5))
+            Dim iMin = iMax * Math.Max(0.0, ParameterValue("i_min_frac", 0.1))
+            Dim pCat = Math.Max(1.0E-6, ParameterValue("P_cat", 1.0))
+            Dim pAn = Math.Max(1.0E-6, ParameterValue("P_an", 1.0))
+
+            If TypeOf model Is ModelPEM_Springer Then
+                Dim m = DirectCast(model, ModelPEM_Springer)
+                m.i0_ref = ParameterValue("i0_an_ref", m.i0_ref)
+                m.E_act = ParameterValue("E_act_an", m.E_act)
+                m.alpha = ParameterValue("alpha_an", m.alpha)
+                m.i_L = Math.Max(1.0E-6, ParameterValue("i_L", m.i_L))
+                m.t_mem = ParameterValue("t_mem", m.t_mem)
+                m.lambda_mem = ParameterValue("lambda_mem", m.lambda_mem)
+                m.rho_electrode = ParameterValue("rho_electrode", m.rho_electrode)
+                m.t_electrode = ParameterValue("t_electrode", m.t_electrode)
+            ElseIf TypeOf model Is ModelAlkaline_SemiEmpirical Then
+                Dim m = DirectCast(model, ModelAlkaline_SemiEmpirical)
+                m.i_L = Math.Max(1.0E-6, ParameterValue("i_L", m.i_L))
+            End If
+
+            Dim calculator As New ElectrolyzerCalculator With {
+                .Model = model,
+                .A_cell = A_cell,
+                .N_cells = N_cells,
+                .i_min = iMin,
+                .i_max = iMax,
+                .T = T,
+                .pCat = pCat,
+                .pAn = pAn,
+                .etaF_ref = ParameterValue("etaF_ref", 0.99)
+            }
+
+            Dim mode = CInt(ParameterValue("SetpointMode", 0.0))
+            Dim currentDensity As Double
+            Dim powerKW As Double
+
+            If mode = 1 Then
+
+                Dim currentA = Math.Max(0.0, ParameterValue("I_stack", 0.0))
+                currentDensity = currentA / A_cell
+                Dim bdCurrent = model.CellVoltage(currentDensity, T, pCat, pAn)
+                powerKW = bdCurrent.U_cell * currentDensity * A_cell * N_cells / 1000.0
+
+            Else
+
+                Dim es = GetEnergyStream()
+                powerKW = ParameterValue("P_stack", 0.0)
+                If es IsNot Nothing AndAlso es.EnergyFlow.HasValue Then powerKW = es.EnergyFlow.Value
+                If powerKW <= 0.0 Then Throw New Exception("Connect an energy stream or set the P_stack parameter.")
+                currentDensity = calculator.CurrentForPower(powerKW)
+
+            End If
+
+            Dim bd = model.CellVoltage(currentDensity, T, pCat, pAn)
+
+            CellVoltage = bd.U_cell
+            StackVoltage = bd.U_cell * N_cells
+            CurrentDensity = currentDensity
+            Current = currentDensity * A_cell * N_cells
+            Power = bd.U_cell * currentDensity * A_cell * N_cells / 1000.0
+            ReversibleVoltage = bd.U_rev
+            ThermoneutralVoltage = bd.U_tn
+            ActivationOverpotential = bd.U_act
+            OhmicOverpotential = bd.U_ohm
+            ConcentrationOverpotential = bd.U_conc
+            FaradayEfficiency = calculator.FaradayEfficiency(currentDensity)
+            SpecificEnergyConsumption = calculator.SpecificEnergyConsumption(Power, currentDensity)
+            EfficiencyHHV = If(bd.U_cell > 0.0, bd.U_tn / bd.U_cell, 0.0)
+            EfficiencyLHV = If(bd.U_cell > 0.0, 1.253 / bd.U_cell, 0.0)
+            CoolingDuty = N_cells * currentDensity * A_cell * (bd.U_cell - bd.U_tn) / 1000.0
+            StackTemperature = T
+
+            Dim nH2 = calculator.HydrogenMolarFlow(currentDensity)
+            Dim o2Produced = nH2 / 2.0
+            Dim crossover = ParameterValue("crossover_coeff", 0.0) / Math.Max(currentDensity, 1.0E-6)
+
+            H2inO2 = 100.0 * crossover / Math.Max(o2Produced + crossover, 1.0E-12)
+            O2inH2 = 100.0 * crossover / Math.Max(nH2 + crossover, 1.0E-12)
+            H2Purity = 100.0 - O2inH2
+
+            Dim N0 = msin.Phases(0).Compounds.Values.Select(Function(c) c.MolarFlow.GetValueOrDefault()).ToList()
+            Dim Nf As New List(Of Double)(N0)
+
+            Dim widx = names.IndexOf(wid)
+            Dim hidx = names.IndexOf(hid)
+            Dim oidx = names.IndexOf("Oxygen")
+
+            Nf(widx) = N0(widx) - nH2
+            If Nf(widx) < 0.0 Then Throw New Exception(String.Format("Negative {0} molar flow. Increase water rate or reduce power.", wid))
+            Nf(hidx) = N0(hidx) + nH2
+            Nf(oidx) = N0(oidx) + o2Produced
+
+            Dim pCatPa = pCat * 100000.0
+            Dim pAnPa = pAn * 100000.0
+
+            Dim xH2Osat = pp.AUX_PVAPi(wid, T) / pCatPa
+            Dim xH2 = 1.0 - xH2Osat
+            Dim NtotH2 = Nf(hidx) / Math.Max(xH2, 1.0E-12)
+            Dim NH2Osat = NtotH2 - Nf(hidx)
+
+            msout1.Clear()
+            msout1.ClearAllProps()
+            msout1.SetOverallCompoundMolarFlow(hid, Nf(hidx))
+            msout1.SetOverallCompoundMolarFlow(wid, NH2Osat)
+            msout1.SetPressure(pCatPa)
+            msout1.SetTemperature(T)
+            msout1.SetFlashSpec("PT")
+            msout1.Calculate()
+
+            Nf(hidx) = 0.0
+            Nf(widx) -= NH2Osat
+            If Nf(widx) < 0.0 Then Throw New Exception("Negative water molar flow. Increase water rate.")
+
+            msout2.Clear()
+            msout2.ClearAllProps()
+            msout2.SetOverallComposition(Nf.ToArray().MultiplyConstY(1.0 / Nf.Sum))
+            msout2.SetMolarFlow(Nf.Sum)
+            msout2.SetPressure(pAnPa)
+            msout2.SetTemperature(T)
+            msout2.SetFlashSpec("PT")
+            msout2.Calculate()
+
+            Dim wasteHeatKW = CoolingDuty
+            Dim coolingIn = GetInletMaterialStream(1)
+            Dim coolingOut = GetOutletMaterialStream(2)
+
+            If coolingIn IsNot Nothing AndAlso coolingOut IsNot Nothing Then
+
+                coolingOut.Clear()
+                coolingOut.ClearAllProps()
+
+                For Each cname In coolingIn.Phases(0).Compounds.Keys
+                    coolingOut.SetOverallCompoundMolarFlow(cname, coolingIn.Phases(0).Compounds(cname).MolarFlow.GetValueOrDefault())
+                Next
+
+                coolingOut.SetPressure(coolingIn.GetPressure())
+                coolingOut.SetTemperature(coolingIn.GetTemperature())
+                coolingOut.SetFlashSpec("PT")
+                coolingOut.Calculate()
+
+                If coolingOut.GetMassFlow() > 1.0E-9 Then
+                    coolingOut.SetMassEnthalpy(coolingOut.GetMassEnthalpy() + wasteHeatKW * 1000.0 / coolingOut.GetMassFlow())
+                    coolingOut.SetFlashSpec("PH")
+                    coolingOut.AtEquilibrium = False
+                End If
+
+            Else
+
+                Dim wh1 = msout1.GetMassFlow() / Math.Max(msin.GetMassFlow(), 1.0E-9)
+                msout1.SetMassEnthalpy(msout1.GetMassEnthalpy() + wasteHeatKW * 1000.0 * wh1)
+                msout1.SetFlashSpec("PH")
+                msout1.AtEquilibrium = False
+
+                Dim wh2 = msout2.GetMassFlow() / Math.Max(msin.GetMassFlow(), 1.0E-9)
+                msout2.SetMassEnthalpy(msout2.GetMassEnthalpy() + wasteHeatKW * 1000.0 * wh2)
+                msout2.SetFlashSpec("PH")
+                msout2.AtEquilibrium = False
+
+            End If
+
             Me.Calculated = True
 
         End Sub
