@@ -367,15 +367,15 @@ Namespace UnitOperations
             }
 
             Dim mode = CInt(ParameterValue("SetpointMode", 0.0))
-            Dim currentDensity As Double
+            Dim currentDensityValue As Double
             Dim powerKW As Double
 
             If mode = 1 Then
 
                 Dim currentA = Math.Max(0.0, ParameterValue("I_stack", 0.0))
-                currentDensity = currentA / A_cell
-                Dim bdCurrent = model.CellVoltage(currentDensity, T, pCat, pAn)
-                powerKW = bdCurrent.U_cell * currentDensity * A_cell * N_cells / 1000.0
+                currentDensityValue = currentA / A_cell
+                Dim bdCurrent = model.CellVoltage(currentDensityValue, T, pCat, pAn)
+                powerKW = bdCurrent.U_cell * currentDensityValue * A_cell * N_cells / 1000.0
 
             Else
 
@@ -383,32 +383,32 @@ Namespace UnitOperations
                 powerKW = ParameterValue("P_stack", 0.0)
                 If es IsNot Nothing AndAlso es.EnergyFlow.HasValue Then powerKW = es.EnergyFlow.Value
                 If powerKW <= 0.0 Then Throw New Exception("Connect an energy stream or set the P_stack parameter.")
-                currentDensity = calculator.CurrentForPower(powerKW)
+                currentDensityValue = calculator.CurrentForPower(powerKW)
 
             End If
 
-            Dim bd = model.CellVoltage(currentDensity, T, pCat, pAn)
+            Dim bd = model.CellVoltage(currentDensityValue, T, pCat, pAn)
 
             CellVoltage = bd.U_cell
             StackVoltage = bd.U_cell * N_cells
-            CurrentDensity = currentDensity
-            Current = currentDensity * A_cell * N_cells
-            Power = bd.U_cell * currentDensity * A_cell * N_cells / 1000.0
+            CurrentDensity = currentDensityValue
+            Current = currentDensityValue * A_cell * N_cells
+            Power = bd.U_cell * currentDensityValue * A_cell * N_cells / 1000.0
             ReversibleVoltage = bd.U_rev
             ThermoneutralVoltage = bd.U_tn
             ActivationOverpotential = bd.U_act
             OhmicOverpotential = bd.U_ohm
             ConcentrationOverpotential = bd.U_conc
-            FaradayEfficiency = calculator.FaradayEfficiency(currentDensity)
-            SpecificEnergyConsumption = calculator.SpecificEnergyConsumption(Power, currentDensity)
+            FaradayEfficiency = calculator.FaradayEfficiency(currentDensityValue)
+            SpecificEnergyConsumption = calculator.SpecificEnergyConsumption(Power, currentDensityValue)
             EfficiencyHHV = If(bd.U_cell > 0.0, bd.U_tn / bd.U_cell, 0.0)
             EfficiencyLHV = If(bd.U_cell > 0.0, 1.253 / bd.U_cell, 0.0)
-            CoolingDuty = N_cells * currentDensity * A_cell * (bd.U_cell - bd.U_tn) / 1000.0
+            CoolingDuty = N_cells * currentDensityValue * A_cell * (bd.U_cell - bd.U_tn) / 1000.0
             StackTemperature = T
 
-            Dim nH2 = calculator.HydrogenMolarFlow(currentDensity)
+            Dim nH2 = calculator.HydrogenMolarFlow(currentDensityValue)
             Dim o2Produced = nH2 / 2.0
-            Dim crossover = ParameterValue("crossover_coeff", 0.0) / Math.Max(currentDensity, 1.0E-6)
+            Dim crossover = ParameterValue("crossover_coeff", 0.0) / Math.Max(currentDensityValue, 1.0E-6)
 
             H2inO2 = 100.0 * crossover / Math.Max(o2Produced + crossover, 1.0E-12)
             O2inH2 = 100.0 * crossover / Math.Max(nH2 + crossover, 1.0E-12)
