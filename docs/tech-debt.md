@@ -10,6 +10,7 @@
 - `ControlArbiter` 尚未被 runner 或桥调用；T-3.4 的 `ApplyInputs` 负责接入。
 - Gate 0 V-3（macOS + Mono）仍未验证。
 - T-1.2 的 ALK 半经验系数（`a_act`/`b_act`/`R_ohm_ref`/`E_act_ohm`）、Faraday 低载曲线和 `crossover_coeff` 是占位值，等 R9/R2 数据标定；Bzovsky 2024 的 <2%/<3% 数值对比也待论文数据。
+- 外部 UO 图形保存的 `<Description>` 为空、`Tag` 不带 UO 前缀，加载时注册表匹配不到，改由保存的输入/输出数量重建通用连接点，UO 的 `LoadData` 再复用；生成器以后应把 `GraphicObject.Description` 写成 UO 描述。
 - 电解槽的 `Calculate` 已有 PEM/ALK 模板和 CI 加载/计算冒烟；带完整质量/能量守恒的数值回归仍待 T-5.2 黄金数据。模板请求的 `P_stack`（1000/3000 kW）高于 UO 默认栈尺寸能达到的功率（实际 567.8/170.4 kW），栈尺寸/标定待补。
 - V-5.1.2 ~ V-5.1.10 需要 OpenPLC v4 Docker/真实主站，本会话只完成了 V-5.1.1（Modbus 自环）。
 - OPC UA 包从计划里的 1.5.374.54 改为 **1.4.371.96**：前者只有 net48/netstandard2.1，net462 无法引用；1.4.371.96 有 net462 资产。None/Anonymous + mock server 已通过；`Basic256Sha256` + Username、OpenPLC v4、断线重连和权限不足场景未测。
