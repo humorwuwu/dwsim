@@ -715,9 +715,9 @@ Public Class FormDynamicsIntegratorControl
             Return Task.FromResult(0)
         End If
 
-        Dim task = DynamicsRunner.RunAsync(Flowsheet, options, host)
-        task.ContinueWith(AddressOf ObserveException, TaskScheduler.Default)
-        Return task
+        Dim runnerTask = DynamicsRunner.RunAsync(Flowsheet, options, host)
+        runnerTask.ContinueWith(AddressOf ObserveException, TaskScheduler.Default)
+        Return runnerTask
 
     End Function
 
