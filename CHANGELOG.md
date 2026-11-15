@@ -14,6 +14,7 @@
 - PEM and alkaline electrolyzer unit operations: polarization models, power/current closure, Faraday/SEC/purity KPIs, latched interlocks and a dynamic stack thermal model.
 - `voltage`, `current` and `currentDensity` unit types.
 - Windows single-file packaging (`release/windows/H2sim-<version>-windows-x64.exe`).
+- PEM and alkaline electrolysis plant sample flowsheets (`PlatformFiles/Common/samples/`), generated and calculation-checked in CI.
 - The WinForms and Eto dynamics forms now drive the headless runner; the WinForms single-step path keeps the legacy loop.
 
 ### Fixed

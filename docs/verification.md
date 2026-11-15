@@ -38,6 +38,14 @@
 - 动态样例冒烟：5 个样例在 headless runner 下跑过 10 s（CSTR、换热器、分离器压力/液位、水罐液位、水罐自定义控制器）；`Dynamic Simulation - PFR.dwxmz` 因保存步长大于 PFR 动态停留时间被跳过（样例自身的 `PFR-001` 限制）。
 - 未验证：Windows 桌面上的暂停/续跑、单步、图表和历史记录行为；6 个动态样例的数值回归基准尚未采集。
 
+## T-4.1 示例流程模板
+
+- 生成器：`DWSIM.Automation.Dynamics.Tests --generate-samples`，物性包 Raoult's Law，水/H2/O2 三组分，电解槽 + 冷却水 + H2/O2 出口。
+- 产物：`PlatformFiles/Common/samples/PEM Electrolysis Plant.dwxmz`、`Alkaline Electrolysis Plant.dwxmz`；CI run `43705553199` 生成并计算通过。
+- 计算结果：PEM 567.8 kW / H2 纯度 99.9998%；ALK 170.4 kW / 99.9953%。
+- 回归：`DWSIM.Automation.Dynamics.Tests` 的 `TestPlantSamples` 重新加载并计算两个模板，断言无求解错误且电解槽功率 > 0。
+- 未覆盖：模板额定功率与 UO 默认栈尺寸/标定不匹配（请求 1000/3000 kW，实际 567.8/170.4 kW）；完整质量/能量守恒回归仍待 T-5.2 黄金数据。
+
 ## 待执行
 
 | 用例 | 依赖 |

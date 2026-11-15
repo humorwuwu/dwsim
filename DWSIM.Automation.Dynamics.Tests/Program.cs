@@ -69,6 +69,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestInterlocks();
             TestDynamicSupport();
             TestDynamicSamples();
+            TestPlantSamples();
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
@@ -145,6 +146,45 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             automation.SaveFlowsheet(flowsheet, Path.Combine(directory, fileName), true);
             Console.WriteLine("generated {0}: power={1} kW, H2 purity={2}%", fileName, unit.Power, unit.H2Purity);
+        }
+
+        private static void TestPlantSamples()
+        {
+            var directories = new[] { "samples", Path.Combine("PlatformFiles", "Common", "samples") };
+            var directory = directories.FirstOrDefault(Directory.Exists);
+            if (directory == null)
+            {
+                Check(false, "plant samples directory not found");
+                return;
+            }
+
+            var files = Directory.EnumerateFiles(directory, "*Electrolysis Plant.dwxmz")
+                .OrderBy(x => x)
+                .ToList();
+            Check(files.Count == 2, "two plant sample flowsheets found");
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    var automation = new global::DWSIM.Automation.Automation3();
+                    var flowsheet = automation.LoadFlowsheet(file);
+                    var errors = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
+                    Check(errors.Count == 0, "plant sample: " + Path.GetFileName(file));
+
+                    var unit = flowsheet.SimulationObjects.Values.OfType<ElectrolyzerUnitOpBase>().FirstOrDefault();
+                    Check(unit != null && unit.Power > 0, "plant electrolyzer: " + Path.GetFileName(file));
+                    if (unit != null)
+                    {
+                        Console.WriteLine("plant {0}: power={1} kW, H2 purity={2}%",
+                            Path.GetFileName(file), unit.Power, unit.H2Purity);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Check(false, "plant sample: " + Path.GetFileName(file) + ": " + ex.Message);
+                }
+            }
         }
 
         private static void TestDynamicSamples()
