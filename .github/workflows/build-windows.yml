@@ -65,9 +65,12 @@ jobs:
         run: |
           pip install asyncua
           $log = Join-Path $env:TEMP "h2sim-opcua.log"
-          Start-Process python -ArgumentList "tests/opcua/mock_server.py" -NoNewWindow -RedirectStandardOutput $log -RedirectStandardError "$log.err"
-          Start-Sleep -Seconds 5
+          $err = "$log.err"
+          $p = Start-Process python -ArgumentList "-u", "tests/opcua/mock_server.py" -NoNewWindow -PassThru -RedirectStandardOutput $log -RedirectStandardError $err
+          Start-Sleep -Seconds 6
           Get-Content $log
+          if (Test-Path $err) { Get-Content $err }
+          if ($p.HasExited) { throw "mock OPC UA server exited with $($p.ExitCode)" }
           if (-not (Select-String -Path $log -Pattern "ready" -Quiet)) { throw "mock OPC UA server did not start" }
 
       - name: Dynamics headless smoke test
