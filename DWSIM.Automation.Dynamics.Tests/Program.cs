@@ -136,6 +136,10 @@ namespace DWSIM.Automation.Dynamics.Tests
             var alkaline = new AlkalineElectrolyzer();
             Check(alkaline.CreateElectrochemicalModel() is ModelAlkaline_SemiEmpirical, "alkaline model factory");
 
+            var storage = new HydrogenStorage();
+            Check(storage.SupportsDynamicMode && storage.HasPropertiesForDynamicMode, "storage dynamic support");
+            Check(storage.UpdateStoredMoles(100.0, 1.0, 10.0) > 100.0, "storage mole balance");
+
             var alkalineModel = new ModelAlkaline_SemiEmpirical();
             var conductivity = alkalineModel.ConductivityKOH(0.30, 353.15);
             Check(Math.Abs(conductivity - 1.3) / 1.3 < 0.10, "KOH conductivity near 1.3 S/cm");
@@ -363,6 +367,8 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             Check(unitOperations.Any(u => u.Description == "PEM Electrolyzer"), "PEM electrolyzer is discovered");
             Check(unitOperations.Any(u => u.Description == "Alkaline Electrolyzer"), "alkaline electrolyzer is discovered");
+            Check(unitOperations.Any(u => u.Description == "H2 Purification"), "H2 purification is discovered");
+            Check(unitOperations.Any(u => u.Description == "Hydrogen Storage"), "hydrogen storage is discovered");
 
             var pem = new PEMElectrolyzer();
             Check(pem.Prefix == "PEMEL-" && !pem.IsSource, "PEM electrolyzer metadata");

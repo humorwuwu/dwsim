@@ -740,6 +740,9 @@
     <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerCalculator.vb" />
     <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerModelParameter.vb" />
     <Compile Include="UnitOperations\Electrolyzers\ElectrolyzerUnitOpBase.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\BoPUnitOpBase.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\H2Purification.vb" />
+    <Compile Include="UnitOperations\Electrolyzers\HydrogenStorage.vb" />
     <Compile Include="UnitOperations\Electrolyzers\IElectrochemicalModel.vb" />
     <Compile Include="UnitOperations\Electrolyzers\ModelAlkaline_SemiEmpirical.vb" />
     <Compile Include="UnitOperations\Electrolyzers\ModelPEM_Springer.vb" />
