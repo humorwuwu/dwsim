@@ -2909,7 +2909,8 @@ Imports DWSIM.ExtensionMethods
                     ElseIf TypeOf obj Is ExternalUnitOperationGraphic Then
                         Dim incount = If(xel.Element("InputConnectors") IsNot Nothing, xel.Element("InputConnectors").Elements.Count, 0)
                         Dim outcount = If(xel.Element("OutputConnectors") IsNot Nothing, xel.Element("OutputConnectors").Elements.Count, 0)
-                        Dim euo = ExternalUnitOperations.Values.Where(Function(x) x.Description = obj.Description).FirstOrDefault
+                        Dim description = If(xel.Element("Description") IsNot Nothing, xel.Element("Description").Value, obj.Description)
+                        Dim euo = ExternalUnitOperations.Values.Where(Function(x) x.Description = description).FirstOrDefault
                         If euo IsNot Nothing Then
                             obj.Owner = euo
                             DirectCast(euo, Interfaces.ISimulationObject).GraphicObject = obj
