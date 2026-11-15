@@ -2,6 +2,8 @@ Imports System.Globalization
 Imports System.Linq
 Imports DWSIM.Drawing.SkiaSharp.GraphicObjects
 Imports DWSIM.DrawingTools.Point
+Imports DWSIM.Interfaces
+Imports DWSIM.Interfaces.Enums
 Imports DWSIM.Interfaces.Enums.GraphicObjects
 Imports DWSIM.Thermodynamics.Streams
 
