@@ -41,6 +41,12 @@ Namespace UnitOperations
             Return Activator.CreateInstance(Me.GetType())
         End Function
 
+        Public Overrides Function LoadData(data As System.Collections.Generic.List(Of System.Xml.Linq.XElement)) As Boolean
+            Dim result = MyBase.LoadData(data)
+            CreateConnectors()
+            Return result
+        End Function
+
         Public Overrides Function GetIconBitmap() As Object
             Return Nothing
         End Function
