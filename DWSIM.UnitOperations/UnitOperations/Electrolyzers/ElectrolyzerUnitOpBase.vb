@@ -718,12 +718,6 @@ Namespace UnitOperations
 
         End Function
 
-        Public Overrides Function LoadData(data As System.Collections.Generic.List(Of System.Xml.Linq.XElement)) As Boolean
-            Dim result = MyBase.LoadData(data)
-            CreateConnectors()
-            Return result
-        End Function
-
         Public Overrides Function GetReport(su As IUnitsOfMeasure, ci As Globalization.CultureInfo, nf As String) As String
 
             Dim sb As New Text.StringBuilder()
@@ -807,6 +801,8 @@ Namespace UnitOperations
                     End If
                 Next
             End If
+
+            CreateConnectors()
 
             Return True
 
