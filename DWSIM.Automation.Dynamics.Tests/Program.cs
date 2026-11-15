@@ -170,7 +170,8 @@ namespace DWSIM.Automation.Dynamics.Tests
                     var automation = new global::DWSIM.Automation.Automation3();
                     var flowsheet = automation.LoadFlowsheet(file);
                     var errors = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
-                    Check(errors.Count == 0, "plant sample: " + Path.GetFileName(file));
+                    Check(errors.Count == 0, "plant sample: " + Path.GetFileName(file) + ": " +
+                        string.Join("; ", errors.Select(e => e.ToString())));
 
                     var unit = flowsheet.SimulationObjects.Values.OfType<ElectrolyzerUnitOpBase>().FirstOrDefault();
                     Check(unit != null && unit.Power > 0, "plant electrolyzer: " + Path.GetFileName(file));
@@ -182,7 +183,7 @@ namespace DWSIM.Automation.Dynamics.Tests
                 }
                 catch (Exception ex)
                 {
-                    Check(false, "plant sample: " + Path.GetFileName(file) + ": " + ex.Message);
+                    Check(false, "plant sample: " + Path.GetFileName(file) + ": " + ex.ToString());
                 }
             }
         }
