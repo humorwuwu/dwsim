@@ -2975,21 +2975,29 @@ Imports DWSIM.ExtensionMethods
                     Dim obj As IGraphicObject = (From go As IGraphicObject In FlowsheetSurface.DrawingObjects Where go.Name = id).SingleOrDefault
                     If Not obj Is Nothing Then
                         If xel.Element("OutputConnectors") IsNot Nothing Then
+                            Dim oi As Integer = 0
                             For Each xel2 As XElement In xel.Element("OutputConnectors").Elements
                                 If CBool(xel2.@IsAttached) = True Then
                                     Dim objToID = pkey & xel2.@AttachedToObjID
                                     If objToID <> "" Then
                                         Dim objTo As IGraphicObject = (From go As IGraphicObject In FlowsheetSurface.DrawingObjects Where go.Name = objToID).SingleOrDefault
                                         If objTo Is Nothing Then objTo = (From go As IGraphicObject In FlowsheetSurface.DrawingObjects Where go.Name = xel2.@AttachedToObjID).SingleOrDefault
-                                        Dim fromidx As Integer = -1
+                                        Dim fromidx As Integer = oi
                                         Dim cp As IConnectionPoint = (From cp2 As IConnectionPoint In objTo.InputConnectors Select cp2 Where cp2.ConnectorName.Split("|"c)(0) = obj.Name).SingleOrDefault
                                         If cp Is Nothing Then cp = (From cp2 As IConnectionPoint In objTo.InputConnectors Select cp2 Where cp2.ConnectorName.Split("|"c)(0) = xel2.@AttachedToObjID).SingleOrDefault
-                                        If Not cp Is Nothing Then
+                                        If Not cp Is Nothing AndAlso CInt(cp.ConnectorName.Split("|"c)(1)) < obj.OutputConnectors.Count Then
                                             fromidx = CInt(cp.ConnectorName.Split("|"c)(1))
                                         End If
-                                        If Not obj Is Nothing And Not objTo Is Nothing Then FlowsheetSurface.ConnectObject(CType(obj, GraphicObject), CType(objTo, GraphicObject), fromidx, CInt(xel2.@AttachedToConnIndex))
+                                        If Not obj Is Nothing And Not objTo Is Nothing Then
+                                            Try
+                                                FlowsheetSurface.ConnectObject(CType(obj, GraphicObject), CType(objTo, GraphicObject), fromidx, CInt(xel2.@AttachedToConnIndex))
+                                            Catch ex As Exception
+                                                Throw New Exception(String.Format("Connection restore failed: {0} -> {1}, from={2}, to={3}", obj.Name, objTo.Name, fromidx, xel2.@AttachedToConnIndex), ex)
+                                            End Try
+                                        End If
                                     End If
                                 End If
+                                oi += 1
                             Next
                         End If
                         If xel.Element("EnergyConnector") IsNot Nothing Then
