@@ -24,7 +24,8 @@ if (-not $makensis) { throw "makensis not found; install NSIS." }
 
 New-Item -ItemType Directory -Force (Join-Path $root "release\windows") | Out-Null
 
-& $makensis "/DVERSION=$version" "/DOUTDIR=release\windows" "packaging\windows\H2sim.nsi"
+$output = Join-Path $root "release\windows"
+& $makensis "/DVERSION=$version" "/DOUTDIR=$output" "/DDISTDIR=$dist" "packaging\windows\H2sim.nsi"
 if ($LASTEXITCODE -ne 0) { throw "makensis failed ($LASTEXITCODE)" }
 
 $exe = Join-Path $root "release\windows\H2sim-$version-windows-x64.exe"
