@@ -136,6 +136,10 @@ namespace DWSIM.Automation.Dynamics.Tests
             var alkaline = new AlkalineElectrolyzer();
             Check(alkaline.CreateElectrochemicalModel() is ModelAlkaline_SemiEmpirical, "alkaline model factory");
 
+            var alkalineModel = new ModelAlkaline_SemiEmpirical();
+            var conductivity = alkalineModel.ConductivityKOH(0.30, 353.15);
+            Check(Math.Abs(conductivity - 1.3) / 1.3 < 0.10, "KOH conductivity near 1.3 S/cm");
+
             var units = new DWSIM.SharedClasses.SystemsOfUnits.SI();
             Check(units.voltage == "V" && units.current == "A" && units.currentDensity == "A/cm2", "electrical unit properties");
             Check(units.GetUnitType("V") == UnitOfMeasure.voltage, "voltage unit type");

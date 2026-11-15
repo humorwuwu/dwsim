@@ -444,6 +444,10 @@ Namespace UnitOperations
             ElseIf TypeOf model Is ModelAlkaline_SemiEmpirical Then
                 Dim m = DirectCast(model, ModelAlkaline_SemiEmpirical)
                 m.i_L = Math.Max(1.0E-6, ParameterValue("i_L", m.i_L))
+                m.KOH_wt = ParameterValue("KOH_wt", m.KOH_wt)
+                m.t_mem = ParameterValue("t_mem", m.t_mem)
+                m.rho_electrode = ParameterValue("rho_electrode", m.rho_electrode)
+                m.t_electrode = ParameterValue("t_electrode", m.t_electrode)
             End If
 
             Dim calculator As New ElectrolyzerCalculator With {

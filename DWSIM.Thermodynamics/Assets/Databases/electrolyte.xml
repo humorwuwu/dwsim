@@ -1652,6 +1652,27 @@
   <DenS_T_C>25</DenS_T_C>
   <DenS_g_mL>2.13</DenS_g_mL>
 </compound>
+<compound>
+  <Name>Potassium Hydroxide</Name>
+  <Formula>KOH</Formula>
+  <MW>56.106</MW>
+  <Ion>False</Ion>
+  <Salt>False</Salt>
+  <HydratedSalt>False</HydratedSalt>
+  <PositiveIon>Potassium Ion</PositiveIon>
+  <NegativeIon>Hydroxide</NegativeIon>
+  <PositiveIonStoichCoeff>1</PositiveIonStoichCoeff>
+  <NegativeIonStoichCoeff>1</NegativeIonStoichCoeff>
+  <StoichSum>2</StoichSum>
+  <Charge>0</Charge>
+  <DelGF_kJ_mol>-379.1</DelGF_kJ_mol>
+  <DelHf_kJ_mol>-424.8</DelHf_kJ_mol>
+  <Cp_J_mol_K>65.2</Cp_J_mol_K>
+  <Tf_C>360</Tf_C>
+  <Hfus_at_Tf_kJ_mol>7.5</Hfus_at_Tf_kJ_mol>
+  <DenS_T_C>25</DenS_T_C>
+  <DenS_g_mL>2.04</DenS_g_mL>
+</compound>
   <compound>
     <Name>Protonated Monoethanolamine (ion)</Name>
     <Formula>HOCH2CH2NH3+</Formula>
