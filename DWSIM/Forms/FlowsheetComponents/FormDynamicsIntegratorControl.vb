@@ -716,10 +716,14 @@ Public Class FormDynamicsIntegratorControl
         End If
 
         Dim task = DynamicsRunner.RunAsync(Flowsheet, options, host)
-        task.ContinueWith(Sub(t) Dim ignored = t.Exception, TaskScheduler.Default)
+        task.ContinueWith(AddressOf ObserveException, TaskScheduler.Default)
         Return task
 
     End Function
+
+    Private Sub ObserveException(t As Task)
+        Dim ignored = t.Exception
+    End Sub
 
     Private Sub ShowRunnerError(ex As Exception)
 
