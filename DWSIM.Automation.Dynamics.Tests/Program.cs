@@ -63,9 +63,53 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestElectrochemicalModel();
             TestInterlocks();
             TestDynamicSupport();
+            TestDynamicSamples();
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
+        }
+
+        private static void TestDynamicSamples()
+        {
+            var directories = new[] { "samples", Path.Combine("PlatformFiles", "Common", "samples") };
+            var directory = directories.FirstOrDefault(Directory.Exists);
+            if (directory == null)
+            {
+                Check(false, "dynamic samples directory not found");
+                return;
+            }
+
+            var files = Directory.EnumerateFiles(directory, "Dynamic Simulation - *.dwxmz")
+                .OrderBy(x => x)
+                .ToList();
+
+            Check(files.Count >= 6, "six dynamic samples found");
+            if (files.Count < 6) return;
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    var automation = new global::DWSIM.Automation.Automation3();
+                    var flowsheet = automation.LoadFlowsheet(file);
+                    var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
+                    var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
+
+                    var stats = DynamicsRunner.Run(flowsheet, new RunOptions
+                    {
+                        DurationSeconds = 10.0,
+                        StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                        ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                        InitialStateId = schedule.InitialFlowsheetStateID
+                    }, new HeadlessDynamicsHost());
+
+                    Check(stats.StepCount >= 1 && stats.Error == null, "dynamic sample: " + Path.GetFileName(file));
+                }
+                catch (Exception ex)
+                {
+                    Check(false, "dynamic sample: " + Path.GetFileName(file) + ": " + ex.Message);
+                }
+            }
         }
 
         private static void TestDynamicSupport()
