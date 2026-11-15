@@ -141,6 +141,23 @@ namespace DWSIM.Automation.Dynamics.Tests
             flowsheet.ConnectObjects(unit.GraphicObject, o2.GraphicObject, 1, 0);
             flowsheet.ConnectObjects(unit.GraphicObject, coolingOut.GraphicObject, 2, 0);
 
+            var purification = new H2Purification();
+            var storage = new HydrogenStorage();
+            var purifiedH2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 650, 30, "H2-PURE");
+            var offGas = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 650, 130, "OFFGAS");
+            var storedH2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 850, 30, "H2-PROD");
+
+            baseFlowsheet.AddObjectToSurface(ObjectType.External, 520, 20, "PUR-1", "", purification, false);
+            purification.CreateConnectors();
+            baseFlowsheet.AddObjectToSurface(ObjectType.External, 730, 20, "STO-1", "", storage, false);
+            storage.CreateConnectors();
+
+            flowsheet.ConnectObjects(h2.GraphicObject, purification.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(purification.GraphicObject, purifiedH2.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(purification.GraphicObject, offGas.GraphicObject, 1, 0);
+            flowsheet.ConnectObjects(purifiedH2.GraphicObject, storage.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(storage.GraphicObject, storedH2.GraphicObject, 0, 0);
+
             var errors = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
             if (errors.Count > 0) throw new Exception(string.Join("; ", errors.Select(e => e.Message)));
 
