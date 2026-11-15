@@ -150,12 +150,13 @@ namespace DWSIM.Automation.Dynamics
                     StoreVariableValues(flowsheet, integrator, step, integrator.CurrentTime);
 
                     flowsheet.ProcessScripts(Scripts.EventType.IntegratorStep, Scripts.ObjectType.Integrator, "");
-                    host.OnPostStep(step, simTime, stats);
 
                     integrator.CurrentTime = integrator.CurrentTime.AddSeconds(currentStep);
 
                     if (integrator.ShouldCalculateControl)
                         ControllerExecutor.Execute(flowsheet, pidControllers, pythonControllers, host);
+
+                    host.OnPostStep(step, simTime, stats);
 
                     var wait = integrator.RealTimeStepMs - stopwatch.ElapsedMilliseconds;
                     if (options.RealTime && wait > 0) Task.Delay((int)wait).Wait();
