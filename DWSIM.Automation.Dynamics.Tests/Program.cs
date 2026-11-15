@@ -115,6 +115,15 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             var h2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 450, 50, "H2");
             var o2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 450, 150, "O2");
+            var coolingIn = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 50, 250, "CW-IN");
+            var coolingOut = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 450, 250, "CW-OUT");
+
+            coolingIn.SetTemperature(298.15);
+            coolingIn.SetPressure(101325.0);
+            coolingIn.SetMassFlow(1.0);
+            coolingIn.SetOverallComposition(new[] { 1.0, 0.0, 0.0 });
+            coolingIn.SetFlashSpec("PT");
+            coolingIn.Calculate();
 
             var baseFlowsheet = (DWSIM.FlowsheetBase.FlowsheetBase)flowsheet;
             baseFlowsheet.AddObjectToSurface(ObjectType.External, 250, 100, "EL-1", "", unit, false);
@@ -126,8 +135,10 @@ namespace DWSIM.Automation.Dynamics.Tests
             unit.Parameters["P_an"].Value = pAn;
 
             flowsheet.ConnectObjects(feed.GraphicObject, unit.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(coolingIn.GraphicObject, unit.GraphicObject, 0, 1);
             flowsheet.ConnectObjects(unit.GraphicObject, h2.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(unit.GraphicObject, o2.GraphicObject, 1, 0);
+            flowsheet.ConnectObjects(unit.GraphicObject, coolingOut.GraphicObject, 2, 0);
 
             var errors = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
             if (errors.Count > 0) throw new Exception(string.Join("; ", errors.Select(e => e.Message)));
