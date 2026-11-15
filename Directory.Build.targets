@@ -1,4 +1,26 @@
 <Project>
+  <!-- Local Mono builds need the netstandard facade that the 4.6.2 pack lacks. -->
+  <ItemGroup Condition="'$(NetStandardFacadesPath)' != ''">
+    <Reference Include="netstandard">
+      <HintPath>$(NetStandardFacadesPath)/netstandard.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Local Mono builds need the backslash HintPaths normalized. -->
+  <Target Name="H2simNormalizeHintPaths" BeforeTargets="ResolveAssemblyReferences" Condition="'$(OS)' != 'Windows_NT'">
+    <Message Importance="high" Text="H2sim: normalizing HintPaths for Mono" />
+    <ItemGroup>
+      <_H2simReference Include="@(Reference)">
+        <HintPath>$([System.String]::Copy('%(Reference.HintPath)').Replace('\','/'))</HintPath>
+      </_H2simReference>
+    </ItemGroup>
+    <ItemGroup>
+      <Reference Remove="@(Reference)" />
+      <Reference Include="@(_H2simReference)" />
+    </ItemGroup>
+  </Target>
+
   <!--
     shortcut: 上游多个工程的 PostBuildEvent 假设 DistPackages 目录已存在，
     干净环境里末尾的 rd /s /q 返回 1，导致构建失败。这里在每个 PostBuildEvent

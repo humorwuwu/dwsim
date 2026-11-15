@@ -25,6 +25,12 @@
 - 结果：**PASS**（CI run `43658987888`）。
 - 未覆盖：`Basic256Sha256` + Username、OpenPLC v4、断线重连、权限不足场景。
 
+## 本地 macOS（Mono 6.12，x86_64 / Rosetta）
+
+- `DWSIM.H2sim.Io.Tests`：**PASS**。覆盖 SignalMap 序列化/校验、缩放方向、NModbus 真实 TCP 自环。
+- 全量 `DWSIM.Automation.Dynamics.Tests` 的本地构建被 `DWSIM.Controls.PythonConsoleControl`（WPF）挡住；Mono 没有 WPF，只能改用 CI 产物运行。
+- GUI 与 Rosetta 启动仍属于 Gate 0 V-3，尚未完成。
+
 ## 待执行
 
 | 用例 | 依赖 |

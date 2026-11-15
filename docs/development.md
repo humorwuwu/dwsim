@@ -30,6 +30,22 @@ msbuild DWSIM.sln /p:Configuration=ReleaseWinMac /p:Platform=x64 /m
 
 注意：本仓库是 `packages.config` + `HintPath`，**没有** MSBuild restore target，必须用 `nuget restore`。
 
+## 本地 macOS（Mono）
+
+- 安装：官方 Mono 6.12（x86_64，Rosetta 下运行），路径 `/Library/Frameworks/Mono.framework/Versions/Current/bin`。
+- 还原：`nuget restore DWSIM.sln -PackagesDirectory packages`。
+- 构建 Io 测试：
+
+  ```sh
+  msbuild DWSIM.H2sim.Io.Tests/DWSIM.H2sim.Io.Tests.csproj \
+    /p:Configuration=Release /p:Platform=AnyCPU \
+    /p:PostBuildEvent= /p:GenerateSerializationAssemblies=Off \
+    /p:NetStandardFacadesPath=/Library/Frameworks/Mono.framework/Versions/6.12.0/lib/mono/4.7.2-api/Facades
+  ```
+
+- `Directory.Build.targets` 会在非 Windows 上归一化 HintPath 并补 netstandard facade。
+- 限制：`DWSIM.Controls.PythonConsoleControl` 是 WPF 工程，Mono 无法编译，完整 Dynamics/Automation 构建需要 CI 产物或 Windows。
+
 ## 打包（Windows 单文件）
 
 ```powershell

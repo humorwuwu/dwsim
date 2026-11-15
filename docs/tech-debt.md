@@ -14,3 +14,4 @@
 - V-5.1.2 ~ V-5.1.10 需要 OpenPLC v4 Docker/真实主站，本会话只完成了 V-5.1.1（Modbus 自环）。
 - OPC UA 包从计划里的 1.5.374.54 改为 **1.4.371.96**：前者只有 net48/netstandard2.1，net462 无法引用；1.4.371.96 有 net462 资产。None/Anonymous + mock server 已通过；`Basic256Sha256` + Username、OpenPLC v4、断线重连和权限不足场景未测。
 - `Microsoft.Bcl.HashCode` 在 MSBuild 里报 MSB3245（引用未解析），运行时靠 CI 手工复制该 DLL。做发行包时必须把它补进 `DistPackages`。
+- 本地 Mono 构建：`Directory.Build.targets` 为非 Windows 构建提供 netstandard facade 引用和 HintPath 反斜杠归一化；`DWSIM.Controls.PythonConsoleControl` 是 WPF 工程，Mono 无法编译，所以全量本地构建只能做到 Io/Modbus 测试，Dynamics/Automation 仍依赖 CI 产物。
