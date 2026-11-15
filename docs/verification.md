@@ -31,6 +31,12 @@
 - 全量 `DWSIM.Automation.Dynamics.Tests` 的本地构建被 `DWSIM.Controls.PythonConsoleControl`（WPF）挡住；Mono 没有 WPF，只能改用 CI 产物运行。
 - GUI 与 Rosetta 启动仍属于 Gate 0 V-3，尚未完成。
 
+## T-3.1 UI host 接线
+
+- WinForms 与 Eto 动态窗体已改为调用 `DynamicsRunner`，各自提供 `IDynamicsHost` 实现；WinForms 的单步前进/后退仍走 legacy 循环。
+- 编译验证：CI Release/Debug 通过。
+- 未验证：Windows 桌面上的暂停/续跑、单步、图表和历史记录行为；6 个动态样例的 UI 回归基准尚未采集。
+
 ## 待执行
 
 | 用例 | 依赖 |
