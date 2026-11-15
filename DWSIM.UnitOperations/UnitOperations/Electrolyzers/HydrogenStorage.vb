@@ -103,8 +103,8 @@ Namespace UnitOperations
             outlet.Clear()
             outlet.ClearAllProps()
 
-            For Each name In names
-                outlet.SetOverallCompoundMolarFlow(name, feed.Phases(0).Compounds(name).MolarFlow.GetValueOrDefault())
+            For Each compoundName In names
+                outlet.SetOverallCompoundMolarFlow(compoundName, feed.Phases(0).Compounds(compoundName).MolarFlow.GetValueOrDefault())
             Next
 
             Dim temperature = feed.GetTemperature()
