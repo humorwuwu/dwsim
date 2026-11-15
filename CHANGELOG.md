@@ -2,6 +2,26 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.0] - 2026-11-15
+
+### Added
+
+- Headless dynamics runner (`DWSIM.Automation.Dynamics`) with host callbacks; the water-tank sample runs 12 steps / 60 s in CI.
+- Signal map (`DWSIM.H2sim.Io`) with XML persistence, validation and bridge contracts.
+- PID ownership, bumpless transfer, output rate limit, setpoint ramp and back-calculation, plus `ControlArbiter`.
+- Modbus TCP server bridge with scaling, word orders, quality sentinel and self-loop tests.
+- OPC UA client bridge with subscriptions, writes, permission probe and reconnect; mock-server test.
+- PEM and alkaline electrolyzer unit operations: polarization models, power/current closure, Faraday/SEC/purity KPIs, latched interlocks and a dynamic stack thermal model.
+- `voltage`, `current` and `currentDensity` unit types.
+- Windows single-file packaging (`release/windows/H2sim-<version>-windows-x64.exe`).
+
+### Fixed
+
+- Modbus scaling direction (`raw = engineering * Scale + Offset`).
+- Headless `Flowsheet2.Clone()` crash when the clone has no spreadsheet workbook.
+- PID controllers are wired to their objects in headless runs.
+- `OnPostStep` now runs after the controllers, so bridges publish the final state.
+
 ## [0.1.0] - 2026-11-14
 
 ### Added

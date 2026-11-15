@@ -30,6 +30,18 @@ msbuild DWSIM.sln /p:Configuration=ReleaseWinMac /p:Platform=x64 /m
 
 注意：本仓库是 `packages.config` + `HintPath`，**没有** MSBuild restore target，必须用 `nuget restore`。
 
+## 打包（Windows 单文件）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
+```
+
+- 前置：先运行 `scripts/build.ps1`，`DistPackages\Windows\DWSIM.exe` 存在。
+- 依赖 NSIS（`makensis`）；CI 的 `windows-latest` 已带，缺失时用 `choco install nsis`。
+- 产物：`release/windows/H2sim-<version>-windows-x64.exe`。
+- 首次运行时自解压到 `%LOCALAPPDATA%\H2sim\<version>`，然后启动 `DWSIM.exe`。
+- macOS `.dmg` 暂不产出：Gate 0 V-3（x86_64 Mono）尚未验证。
+
 ## macOS 说明
 
 - macOS 版计划走**全进程 Rosetta**（方案 M1）；产物按 `macos-x64` 命名。

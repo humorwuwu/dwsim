@@ -46,6 +46,21 @@ jobs:
           path: DistPackages/Windows/
           if-no-files-found: error
 
+      - name: Package Windows single-file
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue)) { choco install nsis -y --no-progress }
+          ./scripts/package-windows.ps1
+
+      - name: Upload Windows package
+        if: matrix.Configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2sim-windows-package
+          path: release/windows/H2sim-*-windows-x64.exe
+          if-no-files-found: error
+
       - name: Signal map tests
         if: matrix.Configuration == 'Release'
         shell: pwsh

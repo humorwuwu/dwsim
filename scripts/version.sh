@@ -24,8 +24,8 @@ DATE=$(date +%Y-%m-%d)
 find . \( -name 'AssemblyInfo.vb' -o -name 'AssemblyInfo.cs' \) \
   -not -path './.git/*' -print0 |
 while IFS= read -r -d '' f; do
-  if grep -qE "AssemblyVersion\(\"($OLD\.0|9\.0\.5\.0)\"\)" "$f"; then
-    perl -0pi -e "s/AssemblyVersion\(\"(?:\Q$OLD\E\.0|9\.0\.5\.0)\"\)/AssemblyVersion(\"$NEW.0\")/g" "$f"
+  if grep -qE "Assembly(File)?Version\(\"($OLD\.0|9\.0\.5\.0)\"\)" "$f"; then
+    perl -0pi -e "s/AssemblyVersion\(\"(?:\Q$OLD\E\.0|9\.0\.5\.0)\"\)/AssemblyVersion(\"$NEW.0\")/g; s/AssemblyFileVersion\(\"(?:\Q$OLD\E\.0|9\.0\.5\.0)\"\)/AssemblyFileVersion(\"$NEW.0\")/g" "$f"
   fi
 done
 
