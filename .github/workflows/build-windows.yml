@@ -107,3 +107,23 @@ jobs:
             Get-Content $log
             if (-not $server.HasExited) { Stop-Process -Id $server.Id -Force }
           }
+
+      - name: Generate plant samples
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          Push-Location DistPackages\Windows
+          try {
+            .\DWSIM.Automation.Dynamics.Tests.exe --generate-samples generated-samples
+            if ($LASTEXITCODE -ne 0) { throw "sample generation failed ($LASTEXITCODE)" }
+          } finally {
+            Pop-Location
+          }
+
+      - name: Upload plant samples
+        if: matrix.Configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2sim-plant-samples
+          path: DistPackages/Windows/generated-samples/*.dwxmz
+          if-no-files-found: error

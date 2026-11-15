@@ -96,6 +96,16 @@
       <Name>DWSIM.Interfaces</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\DWSIM.FlowsheetBase\DWSIM.FlowsheetBase.vbproj">
+      <Project>{AEA79E29-5DFF-4AA8-B431-087A67A1467B}</Project>
+      <Name>DWSIM.FlowsheetBase</Name>
+      <Private>False</Private>
+    </ProjectReference>
+    <ProjectReference Include="..\DWSIM.Thermodynamics\DWSIM.Thermodynamics.vbproj">
+      <Project>{369BC7AF-836B-4DE1-93E3-B051BC148B23}</Project>
+      <Name>DWSIM.Thermodynamics</Name>
+      <Private>False</Private>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -8,6 +8,8 @@ using System.Threading;
 using DWSIM.H2sim.Io;
 using DWSIM.Interfaces;
 using DWSIM.Interfaces.Enums;
+using DWSIM.Interfaces.Enums.GraphicObjects;
+using DWSIM.Thermodynamics.Streams;
 using DWSIM.UnitOperations.SpecialOps;
 using DWSIM.UnitOperations.UnitOperations;
 using NModbus;
@@ -20,6 +22,9 @@ namespace DWSIM.Automation.Dynamics.Tests
 
         private static int Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "--generate-samples")
+                return GeneratePlantSamples(args.Length > 1 ? args[1] : "generated-samples");
+
             var path = args.Length > 0
                 ? args[0]
                 : Path.GetFullPath(Path.Combine("PlatformFiles", "Common", "samples", "Dynamic Simulation - Water Tank Level Control.dwxmz"));
@@ -67,6 +72,68 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
+        }
+
+        private static int GeneratePlantSamples(string outputDirectory)
+        {
+            try
+            {
+                Directory.CreateDirectory(outputDirectory);
+                GeneratePlant(outputDirectory, "PEM Electrolysis Plant.dwxmz", new PEMElectrolyzer(), 1000.0, 30.0, 2.0);
+                GeneratePlant(outputDirectory, "Alkaline Electrolysis Plant.dwxmz", new AlkalineElectrolyzer(), 3000.0, 16.0, 16.0);
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex);
+                return 1;
+            }
+        }
+
+        private static void GeneratePlant(string directory, string fileName, ElectrolyzerUnitOpBase unit,
+                                          double powerKW, double pCat, double pAn)
+        {
+            var automation = new global::DWSIM.Automation.Automation3();
+            var flowsheet = automation.CreateFlowsheet();
+
+            flowsheet.AddCompound("Water");
+            flowsheet.AddCompound("Hydrogen");
+            flowsheet.AddCompound("Oxygen");
+
+            var propertyPackage = flowsheet.GetAvailablePropertyPackages()
+                .FirstOrDefault(x => x.IndexOf("Raoult", StringComparison.OrdinalIgnoreCase) >= 0);
+            if (propertyPackage == null) throw new Exception("Raoult property package not found.");
+            flowsheet.CreateAndAddPropertyPackage(propertyPackage);
+
+            var feed = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 50, 100, "FEED");
+            feed.SetTemperature(353.15);
+            feed.SetPressure(pCat * 100000.0);
+            feed.SetMassFlow(1.0);
+            feed.SetOverallComposition(new[] { 1.0, 0.0, 0.0 });
+            feed.SetFlashSpec("PT");
+            feed.Calculate();
+
+            var h2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 450, 50, "H2");
+            var o2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 450, 150, "O2");
+
+            var baseFlowsheet = (DWSIM.FlowsheetBase.FlowsheetBase)flowsheet;
+            baseFlowsheet.AddObjectToSurface(ObjectType.External, 250, 100, "EL-1", "", unit, false);
+            unit.CreateConnectors();
+
+            unit.Parameters["P_stack"].Value = powerKW;
+            unit.Parameters["SetpointMode"].Value = 0.0;
+            unit.Parameters["P_cat"].Value = pCat;
+            unit.Parameters["P_an"].Value = pAn;
+
+            flowsheet.ConnectObjects(feed.GraphicObject, unit.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(unit.GraphicObject, h2.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(unit.GraphicObject, o2.GraphicObject, 1, 0);
+
+            var errors = automation.CalculateFlowsheet2(flowsheet);
+            if (errors.Count > 0) throw new Exception(string.Join("; ", errors.Select(e => e.Message)));
+
+            automation.SaveFlowsheet(flowsheet, Path.Combine(directory, fileName), true);
+            Console.WriteLine("generated {0}: power={1} kW, H2 purity={2}%", fileName, unit.Power, unit.H2Purity);
         }
 
         private static void TestDynamicSamples()
