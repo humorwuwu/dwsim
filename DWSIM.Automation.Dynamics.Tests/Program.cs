@@ -129,7 +129,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             flowsheet.ConnectObjects(unit.GraphicObject, h2.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(unit.GraphicObject, o2.GraphicObject, 1, 0);
 
-            var errors = automation.CalculateFlowsheet2(flowsheet);
+            var errors = ((global::DWSIM.Automation.IAutomation3)automation).CalculateFlowsheet2(flowsheet);
             if (errors.Count > 0) throw new Exception(string.Join("; ", errors.Select(e => e.Message)));
 
             automation.SaveFlowsheet(flowsheet, Path.Combine(directory, fileName), true);
