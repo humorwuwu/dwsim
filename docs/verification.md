@@ -35,7 +35,8 @@
 
 - WinForms 与 Eto 动态窗体已改为调用 `DynamicsRunner`，各自提供 `IDynamicsHost` 实现；WinForms 的单步前进/后退仍走 legacy 循环。
 - 编译验证：CI Release/Debug 通过。
-- 未验证：Windows 桌面上的暂停/续跑、单步、图表和历史记录行为；6 个动态样例的 UI 回归基准尚未采集。
+- 动态样例冒烟：5 个样例在 headless runner 下跑过 10 s（CSTR、换热器、分离器压力/液位、水罐液位、水罐自定义控制器）；`Dynamic Simulation - PFR.dwxmz` 因保存步长大于 PFR 动态停留时间被跳过（样例自身的 `PFR-001` 限制）。
+- 未验证：Windows 桌面上的暂停/续跑、单步、图表和历史记录行为；6 个动态样例的数值回归基准尚未采集。
 
 ## 待执行
 

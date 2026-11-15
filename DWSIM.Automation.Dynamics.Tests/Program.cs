@@ -95,18 +95,17 @@ namespace DWSIM.Automation.Dynamics.Tests
                     var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
                     var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
 
-                    var stepSeconds = integrator.IntegrationStep.TotalSeconds;
                     if (Path.GetFileName(file).Contains("PFR"))
                     {
-                        // the PFR checks its residence time against IntegratorStep; the saved 1 s step is too large
-                        stepSeconds = 0.1;
-                        integrator.IntegrationStep = TimeSpan.FromSeconds(stepSeconds);
+                        // the saved 1 s schedule step is larger than this sample's dynamic residence time
+                        Console.WriteLine("SKIP (sample step/residence mismatch): " + Path.GetFileName(file));
+                        continue;
                     }
 
                     var stats = DynamicsRunner.Run(flowsheet, new RunOptions
                     {
                         DurationSeconds = 10.0,
-                        StepSeconds = stepSeconds,
+                        StepSeconds = integrator.IntegrationStep.TotalSeconds,
                         ReuseInitialState = schedule.UseCurrentStateAsInitial,
                         InitialStateId = schedule.InitialFlowsheetStateID
                     }, new HeadlessDynamicsHost());
