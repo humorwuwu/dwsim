@@ -158,6 +158,25 @@ namespace DWSIM.Automation.Dynamics.Tests
             flowsheet.ConnectObjects(purifiedH2.GraphicObject, storage.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(storage.GraphicObject, storedH2.GraphicObject, 0, 0);
 
+            var dynamicsManager = flowsheet.DynamicsManager;
+            var integrator = new global::DWSIM.DynamicsManager.Integrator
+            {
+                ID = "plant-integrator",
+                Description = "Plant Dynamics",
+                IntegrationStep = TimeSpan.FromSeconds(1),
+                Duration = TimeSpan.FromSeconds(60)
+            };
+            var schedule = new global::DWSIM.DynamicsManager.Schedule
+            {
+                ID = "plant-schedule",
+                Description = "Plant Dynamics",
+                CurrentIntegrator = integrator.ID,
+                UseCurrentStateAsInitial = true
+            };
+            dynamicsManager.IntegratorList[integrator.ID] = integrator;
+            dynamicsManager.ScheduleList[schedule.ID] = schedule;
+            dynamicsManager.CurrentSchedule = schedule.ID;
+
             var errors = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
             if (errors.Count > 0) throw new Exception(string.Join("; ", errors.Select(e => e.Message)));
 
@@ -196,6 +215,25 @@ namespace DWSIM.Automation.Dynamics.Tests
                     {
                         Console.WriteLine("plant {0}: power={1} kW, H2 purity={2}%",
                             Path.GetFileName(file), unit.Power, unit.H2Purity);
+                    }
+
+                    var storage = flowsheet.SimulationObjects.Values.OfType<HydrogenStorage>().FirstOrDefault();
+                    var manager = flowsheet.DynamicsManager;
+                    if (storage != null && manager.ScheduleList.Count > 0 &&
+                        manager.ScheduleList.ContainsKey(manager.CurrentSchedule))
+                    {
+                        var schedule = manager.ScheduleList[manager.CurrentSchedule];
+                        var integrator = manager.IntegratorList[schedule.CurrentIntegrator];
+                        var startPressure = storage.TankPressure;
+                        var dynamicStats = DynamicsRunner.Run(flowsheet, new RunOptions
+                        {
+                            DurationSeconds = Math.Min(60.0, integrator.Duration.TotalSeconds),
+                            StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                            ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                            InitialStateId = schedule.InitialFlowsheetStateID
+                        }, new HeadlessDynamicsHost());
+                        Check(dynamicStats.Error == null && storage.TankPressure > startPressure,
+                            "storage pressure rises: " + Path.GetFileName(file) + " " + startPressure + " -> " + storage.TankPressure);
                     }
                 }
                 catch (Exception ex)

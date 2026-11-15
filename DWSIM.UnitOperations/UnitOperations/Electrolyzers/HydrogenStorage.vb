@@ -34,6 +34,8 @@ Namespace UnitOperations
 
         Public Property TankPressure As Double = 30.0
 
+        Public Property DrawFlow As Double = 0.0
+
         Public Property MaxPressure As Double = 45.0
 
         Public Property CompressibilityFactor As Double = 0.95
@@ -141,7 +143,7 @@ Namespace UnitOperations
             Dim outlet = GetOutletMaterialStream(0)
 
             Dim inletFlow = If(feed IsNot Nothing, feed.GetMolarFlow(), 0.0)
-            Dim outletFlow = If(outlet IsNot Nothing, outlet.GetMolarFlow(), 0.0)
+            Dim outletFlow = DrawFlow
 
             MolesStored = UpdateStoredMoles(MolesStored, inletFlow - outletFlow, timestep)
 
@@ -158,7 +160,7 @@ Namespace UnitOperations
         End Sub
 
         Public Overrides Function GetProperties(proptype As PropertyType) As String()
-            Return New String() {"Tank Pressure", "Moles Stored", "Max Pressure", "Overpressure"}
+            Return New String() {"Tank Pressure", "Moles Stored", "Max Pressure", "Overpressure", "Draw Flow"}
         End Function
 
         Public Overrides Function GetPropertyValue(prop As String, Optional su As IUnitsOfMeasure = Nothing) As Object
@@ -168,6 +170,7 @@ Namespace UnitOperations
                 Case "Moles Stored" : Return MolesStored
                 Case "Max Pressure" : Return MaxPressure
                 Case "Overpressure" : Return If(Overpressure, 1.0, 0.0)
+                Case "Draw Flow" : Return DrawFlow
                 Case Else : Return 0.0
             End Select
 
@@ -177,7 +180,7 @@ Namespace UnitOperations
 
             Select Case prop
                 Case "Tank Pressure", "Max Pressure" : Return "bar"
-                Case "Moles Stored" : Return "mol"
+                Case "Moles Stored", "Draw Flow" : Return "mol/s"
                 Case Else : Return ""
             End Select
 

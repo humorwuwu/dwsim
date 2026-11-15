@@ -110,6 +110,11 @@
       <Name>DWSIM.Thermodynamics</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\DWSIM.DynamicsManager\DWSIM.DynamicsManager.vbproj">
+      <Project>{654C0D60-C94B-4A0B-B34D-1D71A6A20420}</Project>
+      <Name>DWSIM.DynamicsManager</Name>
+      <Private>False</Private>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
