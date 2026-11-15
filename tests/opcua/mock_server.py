@@ -20,11 +20,13 @@ async def main():
     server.set_identity_tokens([ua.AnonymousIdentityToken])
 
     index = await server.register_namespace("urn:openplc:opcua:namespace")
-    plc = await server.nodes.objects.add_object(index, "PLC")
-    setpoint = await plc.add_variable(index, "P_set", 1.8, ua.VariantType.Float)
-    output = await plc.add_variable(index, "Out", 0.0, ua.VariantType.Float)
+    plc = await server.nodes.objects.add_object(ua.NodeId("PLC", index), "PLC")
+    setpoint = await plc.add_variable(ua.NodeId("P_set", index), "P_set", 1.8, ua.VariantType.Float)
+    output = await plc.add_variable(ua.NodeId("Out", index), "Out", 0.0, ua.VariantType.Float)
     await setpoint.set_writable()
     await output.set_writable()
+
+    print(f"nodes: ns={index};s=P_set, ns={index};s=Out", flush=True)
 
     async with server:
         print("mock OPC UA server ready", flush=True)

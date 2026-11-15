@@ -41,6 +41,7 @@ namespace DWSIM.H2sim.Io
 
             var session = Session.Create(Configuration, endpoint, false, false, "H2sim", 60000, identity, null)
                 .GetAwaiter().GetResult();
+            session.FetchNamespaceTables();
             session.KeepAlive += (sender, e) => keepAlive?.Invoke(session, e);
 
             return session;
