@@ -80,7 +80,9 @@ jobs:
           H2SIM_OPCUA_TEST: "1"
         run: |
           Copy-Item DWSIM.H2sim.Io\bin\x64\Release\* DistPackages\Windows\ -Force
+          Copy-Item packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll DistPackages\Windows\ -Force
           Copy-Item DWSIM.Automation.Dynamics.Tests\bin\x64\Release\* DistPackages\Windows\ -Force
+          Get-ChildItem DistPackages\Windows\Opc.Ua*.dll, DistPackages\Windows\Microsoft.Bcl.HashCode.dll -ErrorAction SilentlyContinue | Select-Object Name
           Push-Location DistPackages\Windows
           try {
             .\DWSIM.Automation.Dynamics.Tests.exe "samples\Dynamic Simulation - Water Tank Level Control.dwxmz"

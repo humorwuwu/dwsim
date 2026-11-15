@@ -100,7 +100,7 @@ namespace DWSIM.H2sim.Io
             }
             catch (Exception ex)
             {
-                Fail(ex.Message);
+                Fail(ex.ToString());
                 return false;
             }
         }
