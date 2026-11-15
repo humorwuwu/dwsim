@@ -555,8 +555,8 @@ namespace DWSIM.Automation
         [DispId(1)]
         private static void RegisterExternalUnitOperations(Flowsheet2 fsheet)
         {
-            foreach (var uo in DWSIM.SharedClasses.Utility.GetUnitOperations(
-                typeof(DWSIM.UnitOperations.UnitOperations.WaterElectrolyzer).Assembly))
+            foreach (var uo in global::DWSIM.SharedClasses.Utility.GetUnitOperations(
+                typeof(global::DWSIM.UnitOperations.UnitOperations.WaterElectrolyzer).Assembly))
             {
                 if (!fsheet.ExternalUnitOperations.ContainsKey(uo.Description))
                     fsheet.ExternalUnitOperations.Add(uo.Description, uo);
