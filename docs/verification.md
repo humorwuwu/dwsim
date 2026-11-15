@@ -41,11 +41,11 @@
 ## T-4.1 示例流程模板
 
 - 生成器：`DWSIM.Automation.Dynamics.Tests --generate-samples`，物性包 Raoult's Law，水/H2/O2 三组分，电解槽 + 冷却水 + H2/O2 出口。
-- 产物：`PlatformFiles/Common/samples/PEM Electrolysis Plant.dwxmz`、`Alkaline Electrolysis Plant.dwxmz`；CI run `43705553199` 生成，CI run `43718052236` 回读/计算通过（生成器在该 run 也重新生成并上传）。
-- 计算结果：PEM 567.82 kW / H2 纯度 99.9998%；ALK 170.43 kW / 99.9953%。
+- 产物：`PlatformFiles/Common/samples/PEM Electrolysis Plant.dwxmz`、`Alkaline Electrolysis Plant.dwxmz`；每套含电解槽、冷却水、H2 纯化、储罐和 H2/O2/off-gas 出口。CI run `43722436127` 生成并上传；回读/计算由下一 CI run 验证。
+- 计算结果：PEM 567.82 kW / H2 纯度 99.9998%；ALK 170.43 kW / 99.9953%；纯化/储罐链在生成器内计算通过。
 - 回归：`DWSIM.Automation.Dynamics.Tests` 的 `TestPlantSamples` 重新加载并计算两个已提交模板，断言无求解错误且电解槽功率 > 0。
 - 加载链路修复：自动化加载前注册外部 UO；外部 UO 图形按保存的连接器数量重建真实连接点；连接恢复使用保存的输出索引。
-- 未覆盖：模板额定功率与 UO 默认栈尺寸/标定不匹配（请求 1000/3000 kW，实际 567.8/170.4 kW）；完整质量/能量守恒回归仍待 T-5.2 黄金数据。
+- 未覆盖：模板额定功率与 UO 默认栈尺寸/标定不匹配（请求 1000/3000 kW，实际 567.8/170.4 kW）；G/L 分离和两级压缩尚未接入；储罐动态模式（计划验收 2）未验证；完整质量/能量守恒回归仍待 T-5.2 黄金数据。
 
 ## 待执行
 
