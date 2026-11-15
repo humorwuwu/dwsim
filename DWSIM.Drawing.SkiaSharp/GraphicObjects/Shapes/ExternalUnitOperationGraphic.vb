@@ -59,7 +59,24 @@ Namespace GraphicObjects.Shapes
             If euo IsNot Nothing Then
                 euo.CreateConnectors()
             ElseIf InCount > 0 OrElse OutCount > 0 Then
-                MyBase.CreateConnectors(InCount, OutCount)
+                InputConnectors.Clear()
+                For i = 0 To InCount - 1
+                    InputConnectors.Add(New ConnectionPoint With {
+                        .Position = New Point(X, Y + CInt((i + 1) * Height / (InCount + 1))),
+                        .Type = ConType.ConIn,
+                        .Direction = ConDir.Right,
+                        .ConnectorName = "In" & i
+                    })
+                Next
+                OutputConnectors.Clear()
+                For i = 0 To OutCount - 1
+                    OutputConnectors.Add(New ConnectionPoint With {
+                        .Position = New Point(X + Width, Y + CInt((i + 1) * Height / (OutCount + 1))),
+                        .Type = ConType.ConOut,
+                        .Direction = ConDir.Right,
+                        .ConnectorName = "Out" & i
+                    })
+                Next
             End If
 
         End Sub
