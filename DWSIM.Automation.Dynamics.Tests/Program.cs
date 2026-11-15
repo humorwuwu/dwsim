@@ -324,6 +324,9 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             using (var bridge = new OpcUaClientBridge())
             {
+                var errors = new List<string>();
+                bridge.SignalError += (sender, e) => errors.Add(e.Message);
+
                 Check(bridge.Connect(map, flowsheet), "OPC UA connects: " + bridge.Status.Message);
                 if (!bridge.Status.Connected) return;
 
@@ -341,6 +344,8 @@ namespace DWSIM.Automation.Dynamics.Tests
                 Check(Math.Abs(pid.AdjustValue - 1.8) < 1e-3, "OPC UA setpoint reached the PID");
 
                 var published = new OpcUaSessionFactory().ReadDouble(connection, "Out", "urn:openplc:opcua:namespace");
+                Console.WriteLine("OPC UA published={0} expected={1} status={2} error={3} errors={4}",
+                    published, pid.OutputAbs, bridge.Status.Message, bridge.Diagnostics.LastError, string.Join("; ", errors));
                 Check(Math.Abs(published - pid.OutputAbs) < 0.1, "OPC UA output published");
 
                 bridge.Disconnect();
