@@ -2907,16 +2907,18 @@ Imports DWSIM.ExtensionMethods
                         obj.CreateConnectors(xel.Element("InputConnectors").Elements.Count, xel.Element("OutputConnectors").Elements.Count)
                         obj.PositionConnectors()
                     ElseIf TypeOf obj Is ExternalUnitOperationGraphic Then
+                        Dim incount = If(xel.Element("InputConnectors") IsNot Nothing, xel.Element("InputConnectors").Elements.Count, 0)
+                        Dim outcount = If(xel.Element("OutputConnectors") IsNot Nothing, xel.Element("OutputConnectors").Elements.Count, 0)
                         Dim euo = ExternalUnitOperations.Values.Where(Function(x) x.Description = obj.Description).FirstOrDefault
                         If euo IsNot Nothing Then
                             obj.Owner = euo
                             DirectCast(euo, Interfaces.ISimulationObject).GraphicObject = obj
-                            obj.CreateConnectors(0, 0)
+                            obj.CreateConnectors(incount, outcount)
                             obj.Owner = Nothing
                             DirectCast(euo, Interfaces.ISimulationObject).GraphicObject = Nothing
                         Else
                             Try
-                                obj.CreateConnectors(0, 0)
+                                obj.CreateConnectors(incount, outcount)
                             Catch ex As Exception
                             End Try
                         End If

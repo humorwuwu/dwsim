@@ -55,7 +55,12 @@ Namespace GraphicObjects.Shapes
 
         Public Overrides Sub CreateConnectors(InCount As Integer, OutCount As Integer)
 
-            TryCast(Owner, IExternalUnitOperation)?.CreateConnectors()
+            Dim euo = TryCast(Owner, IExternalUnitOperation)
+            If euo IsNot Nothing Then
+                euo.CreateConnectors()
+            ElseIf InCount > 0 OrElse OutCount > 0 Then
+                MyBase.CreateConnectors(InCount, OutCount)
+            End If
 
         End Sub
 
