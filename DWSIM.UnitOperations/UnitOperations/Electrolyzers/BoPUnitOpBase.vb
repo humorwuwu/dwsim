@@ -43,7 +43,7 @@ Namespace UnitOperations
 
         Public Overrides Function LoadData(data As System.Collections.Generic.List(Of System.Xml.Linq.XElement)) As Boolean
             Dim result = MyBase.LoadData(data)
-            CreateConnectors()
+            If GraphicObject IsNot Nothing Then CreateConnectors()
             Return result
         End Function
 

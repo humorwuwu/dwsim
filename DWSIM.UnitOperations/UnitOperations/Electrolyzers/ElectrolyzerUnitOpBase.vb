@@ -802,7 +802,7 @@ Namespace UnitOperations
                 Next
             End If
 
-            CreateConnectors()
+            If GraphicObject IsNot Nothing Then CreateConnectors()
 
             Return True
 
