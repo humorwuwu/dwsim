@@ -18,6 +18,13 @@
 - 结果：**PASS**（CI run `43653329916`，dynamics smoke test）。
 - 备注：该用例在 2026-11-15 发现并修复了 `ModbusScaler` 缩放方向反了的问题（commit `0194a45e6`）。
 
+## V-3.5 OPC UA 客户端（mock server）
+
+- 流程：`tests/opcua/mock_server.py`（asyncua）暴露 `ns=2;s=P_set` / `s=Out`；H2sim 用 `OpcUaClientBridge`（None / Anonymous）订阅 `P_set`，跑 2 步，把 PID 的 `OutputAbs` 写到 `Out`；再用第二个会话读回。
+- 判据：读回值 ≈ 最终 `OutputAbs`（差 < 0.1），步数 == 2，PLC 写入的 SP 到达 PID。
+- 结果：**PASS**（CI run `43658987888`）。
+- 未覆盖：`Basic256Sha256` + Username、OpenPLC v4、断线重连、权限不足场景。
+
 ## 待执行
 
 | 用例 | 依赖 |
