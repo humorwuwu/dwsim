@@ -553,6 +553,16 @@ namespace DWSIM.Automation
         }
 
         [DispId(1)]
+        private static void RegisterExternalUnitOperations(Flowsheet2 fsheet)
+        {
+            foreach (var uo in DWSIM.SharedClasses.Utility.GetUnitOperations(
+                typeof(DWSIM.UnitOperations.UnitOperations.WaterElectrolyzer).Assembly))
+            {
+                if (!fsheet.ExternalUnitOperations.ContainsKey(uo.Description))
+                    fsheet.ExternalUnitOperations.Add(uo.Description, uo);
+            }
+        }
+
         public IFlowsheet LoadFlowsheet(string filepath, Action UIUpdHandler = null)
         {
             Settings.AutomationMode = true;
@@ -564,6 +574,7 @@ namespace DWSIM.Automation
             fsheet.SetResourcesManager(rm);
             fsheet.SetPropertyResourcesManager(prm);
             fsheet.Init();
+            RegisterExternalUnitOperations(fsheet);
             if (System.IO.Path.GetExtension(filepath).ToLower().EndsWith("z"))
             {
                 fsheet.LoadZippedXML(filepath);
@@ -588,6 +599,7 @@ namespace DWSIM.Automation
             fsheet.SetResourcesManager(rm);
             fsheet.SetPropertyResourcesManager(prm);
             fsheet.Init();
+            RegisterExternalUnitOperations(fsheet);
             if (System.IO.Path.GetExtension(filepath).ToLower().EndsWith("z"))
             {
                 fsheet.LoadZippedXML(filepath);
