@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace DWSIM.Automation.Dynamics
 {
@@ -65,5 +66,23 @@ namespace DWSIM.Automation.Dynamics
 
         /// <summary>Process the schedule's event list and cause-and-effect matrix.</summary>
         public bool SubscribeToSchedule { get; set; } = true;
+
+        /// <summary>Simulated seconds already completed (used when resuming a paused UI run).</summary>
+        public double StartSimTime { get; set; } = 0.0;
+
+        /// <summary>Reset PID/Python controllers before the run. False when resuming.</summary>
+        public bool ResetControllers { get; set; } = true;
+
+        /// <summary>Reset the integrator clock and contents before the run. False when resuming.</summary>
+        public bool ResetTimeBase { get; set; } = true;
+
+        /// <summary>Clear previously stored monitored values before the run.</summary>
+        public bool ClearMonitoredValues { get; set; } = true;
+
+        /// <summary>Raise the IntegratorStarted script event before the first step.</summary>
+        public bool RaiseStartedEvent { get; set; } = true;
+
+        /// <summary>Optional historian shared with the UI across pause/resume.</summary>
+        public Dictionary<DateTime, string> Historian { get; set; } = null;
     }
 }

@@ -1,6 +1,7 @@
 ﻿Imports System.Linq
 Imports System.Threading.Tasks
 Imports DWSIM.DynamicsManager
+Imports DWSIM.Automation.Dynamics
 Imports DWSIM.Interfaces
 Imports OxyPlot
 Imports OxyPlot.Axes
@@ -262,7 +263,7 @@ Public Class FormDynamicsIntegratorControl
 
     End Sub
 
-    Public Function RunIntegrator(realtime As Boolean, waittofinish As Boolean, restarting As Boolean, guiless As Boolean, Optional nstep As Integer = 0) As Task
+    Private Function RunIntegratorLegacy(realtime As Boolean, waittofinish As Boolean, restarting As Boolean, guiless As Boolean, Optional nstep As Integer = 0) As Task
 
         If nstep = 0 Then ChartIsSetup = False
 
@@ -651,6 +652,185 @@ Public Class FormDynamicsIntegratorControl
         Return maintask
 
     End Function
+
+    Public Function RunIntegrator(realtime As Boolean, waittofinish As Boolean, restarting As Boolean, guiless As Boolean, Optional nstep As Integer = 0) As Task
+
+        If nstep <> 0 Then Return RunIntegratorLegacy(realtime, waittofinish, restarting, guiless, nstep)
+
+        Return RunIntegratorWithRunner(realtime, waittofinish, restarting, guiless)
+
+    End Function
+
+    Private Function RunIntegratorWithRunner(realtime As Boolean, waittofinish As Boolean, restarting As Boolean, guiless As Boolean) As Task
+
+        If Not Flowsheet.DynamicsManager.ScheduleList.ContainsKey(Flowsheet.DynamicsManager.CurrentSchedule) Then
+            Throw New Exception(Flowsheet.GetTranslatedString1("Please select a valid schedule."))
+        End If
+
+        Dim schedule = Flowsheet.DynamicsManager.ScheduleList(Flowsheet.DynamicsManager.CurrentSchedule)
+
+        If Not Flowsheet.DynamicsManager.IntegratorList.ContainsKey(schedule.CurrentIntegrator) Then
+            Throw New Exception(Flowsheet.GetTranslatedString1("Please select a valid integrator for the selected schedule."))
+        End If
+
+        Dim integrator = Flowsheet.DynamicsManager.IntegratorList(schedule.CurrentIntegrator)
+
+        If Not restarting Then Historian = New Dictionary(Of Date, String)
+
+        Dim options As New RunOptions With {
+            .RealTime = realtime,
+            .StepSeconds = integrator.IntegrationStep.TotalSeconds,
+            .ControlDecimation = integrator.CalculationRateControl,
+            .EquilibriumDecimation = integrator.CalculationRateEquilibrium,
+            .PressureFlowDecimation = integrator.CalculationRatePressureFlow,
+            .ReuseInitialState = schedule.UseCurrentStateAsInitial,
+            .InitialStateId = schedule.InitialFlowsheetStateID,
+            .StartSimTime = If(restarting, CDbl(ProgressBar1.Value), 0.0),
+            .ResetControllers = Not restarting,
+            .ResetTimeBase = Not restarting,
+            .ClearMonitoredValues = Not restarting,
+            .RaiseStartedEvent = Not restarting,
+            .Historian = Historian
+        }
+
+        Dim host As IDynamicsHost
+
+        If guiless Then
+            host = New HeadlessDynamicsHost()
+        Else
+            host = New WinFormsDynamicsHost(Me)
+        End If
+
+        If Not guiless Then
+            Abort = False
+            ChartIsSetup = False
+        End If
+
+        If waittofinish Then
+            Try
+                DynamicsRunner.Run(Flowsheet, options, host)
+            Catch ex As Exception
+                ShowRunnerError(ex)
+            End Try
+            Return Task.FromResult(0)
+        End If
+
+        Dim task = DynamicsRunner.RunAsync(Flowsheet, options, host)
+        task.ContinueWith(Sub(t) Dim ignored = t.Exception, TaskScheduler.Default)
+        Return task
+
+    End Function
+
+    Private Sub ShowRunnerError(ex As Exception)
+
+        Dim baseException = If(TypeOf ex Is AggregateException, DirectCast(ex, AggregateException).GetBaseException(), ex.GetBaseException())
+        Flowsheet.RunCodeOnUIThread(Sub() Flowsheet.ShowMessage(baseException.Message, IFlowsheet.MessageType.GeneralError))
+
+    End Sub
+
+    Private Class WinFormsDynamicsHost
+
+        Implements IDynamicsHost
+
+        Private ReadOnly _form As FormDynamicsIntegratorControl
+
+        Public Sub New(form As FormDynamicsIntegratorControl)
+            _form = form
+        End Sub
+
+        Public ReadOnly Property ShouldAbort As Boolean Implements IDynamicsHost.ShouldAbort
+            Get
+                Return _form.Abort
+            End Get
+        End Property
+
+        Public ReadOnly Property IsPaused As Boolean Implements IDynamicsHost.IsPaused
+            Get
+                Return _form.Paused
+            End Get
+        End Property
+
+        Public Sub OnRunStarting(flowsheet As IFlowsheet, options As RunOptions) Implements IDynamicsHost.OnRunStarting
+
+            Dim integrator = GetIntegrator(flowsheet)
+
+            flowsheet.RunCodeOnUIThread(Sub()
+                                            _form.Running = True
+                                            _form.ChartIsSetup = False
+                                            _form.btnRealtime.Enabled = False
+                                            _form.btnViewResults.Enabled = False
+                                            _form.ProgressBar1.Value = CInt(Math.Min(options.StartSimTime, Integer.MaxValue))
+                                            _form.ProgressBar1.Minimum = 0
+                                            _form.lblFinish.Text = integrator.Duration.ToString("c")
+                                            _form.lblCurrent.Text = New TimeSpan(0, 0, CInt(options.StartSimTime)).ToString("c")
+                                            If options.RealTime Then
+                                                _form.ProgressBar1.Maximum = Integer.MaxValue
+                                                _form.ProgressBar1.Style = ProgressBarStyle.Marquee
+                                            Else
+                                                _form.ProgressBar1.Maximum = CInt(integrator.Duration.TotalSeconds)
+                                                _form.ProgressBar1.Style = ProgressBarStyle.Continuous
+                                            End If
+                                        End Sub)
+
+        End Sub
+
+        Public Sub OnPreStep(stepIndex As Integer, simTime As Double) Implements IDynamicsHost.OnPreStep
+
+            Dim integrator = GetIntegrator(_form.Flowsheet)
+
+            _form.Flowsheet.RunCodeOnUIThread(Sub()
+                                                  _form.ProgressBar1.Value = CInt(Math.Min(simTime, Integer.MaxValue))
+                                                  _form.lblCurrent.Text = New TimeSpan(0, 0, CInt(simTime)).ToString("c")
+                                                  _form.UpdateHistorianDisplaySize()
+                                                  _form.Refresh()
+                                              End Sub)
+
+        End Sub
+
+        Public Sub OnPostStep(stepIndex As Integer, simTime As Double, stats As RunStats) Implements IDynamicsHost.OnPostStep
+
+            Dim integrator = GetIntegrator(_form.Flowsheet)
+
+            _form.Flowsheet.RunCodeOnUIThread(Sub()
+                                                  _form.Flowsheet.FormDynamics.UpdateControllerList()
+                                                  _form.Flowsheet.FormDynamics.UpdateIndicatorList()
+                                                  _form.Flowsheet.FormSurface.FControl.Invalidate()
+                                                  If Not _form.ChartIsSetup Then _form.SetupChart(integrator)
+                                                  _form.UpdateChart(integrator)
+                                              End Sub)
+
+        End Sub
+
+        Public Sub OnControllerIteration(controller As ISimulationObject) Implements IDynamicsHost.OnControllerIteration
+        End Sub
+
+        Public Sub OnError(exception As Exception, stepIndex As Integer) Implements IDynamicsHost.OnError
+            _form.ShowRunnerError(exception)
+        End Sub
+
+        Public Sub OnRunFinished(stats As RunStats) Implements IDynamicsHost.OnRunFinished
+
+            _form.Flowsheet.RunCodeOnUIThread(Sub()
+                                                  If Not _form.Paused Then _form.Running = False
+                                                  _form.btnRealtime.Enabled = True
+                                                  _form.btnViewResults.Enabled = True
+                                                  _form.btnRun.Enabled = True
+                                                  _form.btnRun.BackgroundImage = My.Resources.icons8_play
+                                                  If Not _form.Paused Then
+                                                      _form.ProgressBar1.Value = 0
+                                                      _form.ProgressBar1.Style = ProgressBarStyle.Continuous
+                                                  End If
+                                                  _form.Flowsheet.UpdateOpenEditForms()
+                                              End Sub)
+
+        End Sub
+
+        Private Shared Function GetIntegrator(flowsheet As IFlowsheet) As IDynamicsIntegrator
+            Dim schedule = flowsheet.DynamicsManager.ScheduleList(flowsheet.DynamicsManager.CurrentSchedule)
+            Return flowsheet.DynamicsManager.IntegratorList(schedule.CurrentIntegrator)
+        End Function
+
+    End Class
 
     Private Sub btnViewResults_Click(sender As Object, e As EventArgs) Handles btnViewResults.Click
 

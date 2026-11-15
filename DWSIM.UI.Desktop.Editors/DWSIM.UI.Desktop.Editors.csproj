@@ -347,4 +347,10 @@
   </Target>
   <Import Project="..\packages\SkiaSharp.1.68.2.1\build\net45\SkiaSharp.targets" Condition="Exists('..\packages\SkiaSharp.1.68.2.1\build\net45\SkiaSharp.targets')" />
   <Import Project="..\packages\Eto.Forms.2.8.3\build\Eto.Forms.targets" Condition="Exists('..\packages\Eto.Forms.2.8.3\build\Eto.Forms.targets')" />
+  <ItemGroup>
+    <ProjectReference Include="..\DWSIM.Automation.Dynamics\DWSIM.Automation.Dynamics.csproj">
+      <Project>{04348922-C1B2-495F-8454-08CD25461A41}</Project>
+      <Name>DWSIM.Automation.Dynamics</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

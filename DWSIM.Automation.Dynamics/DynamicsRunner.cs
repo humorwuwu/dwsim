@@ -62,7 +62,7 @@ namespace DWSIM.Automation.Dynamics
             integrator.RealTime = options.RealTime;
 
             var stats = new RunStats();
-            var historian = new Dictionary<DateTime, string>();
+            var historian = options.Historian ?? new Dictionary<DateTime, string>();
             IFlowsheet clone = null;
             EventProcessor eventProcessor = null;
             var started = false;
@@ -79,15 +79,18 @@ namespace DWSIM.Automation.Dynamics
                     RestoreState(flowsheet, options.InitialStateId);
                 }
 
-                integrator.MonitoredVariableValues.Clear();
+                if (options.ClearMonitoredValues) integrator.MonitoredVariableValues.Clear();
 
-                foreach (var controller in pidControllers) controller.Reset();
-                foreach (var controller in pythonControllers) controller.ResetRequested = true;
+                if (options.ResetControllers)
+                {
+                    foreach (var controller in pidControllers) controller.Reset();
+                    foreach (var controller in pythonControllers) controller.ResetRequested = true;
+                }
 
-                if (schedule.ResetContentsOfAllObjects) ResetDynamicContents(flowsheet);
+                if (options.ClearMonitoredValues && schedule.ResetContentsOfAllObjects) ResetDynamicContents(flowsheet);
 
-                integrator.CurrentTime = DateTime.Now;
-                integrator.MonitoredVariableValues.Clear();
+                if (options.ResetTimeBase) integrator.CurrentTime = DateTime.Now;
+                if (options.ClearMonitoredValues) integrator.MonitoredVariableValues.Clear();
 
                 flowsheet.SupressMessages = true;
                 flowsheet.DynamicMode = true;
@@ -97,13 +100,14 @@ namespace DWSIM.Automation.Dynamics
                 if (clone == null) throw new InvalidOperationException("Could not clone the flowsheet for event interpolation.");
                 eventProcessor = new EventProcessor(flowsheet, clone, historian);
 
-                flowsheet.ProcessScripts(Scripts.EventType.IntegratorStarted, Scripts.ObjectType.Integrator, "");
+                if (options.RaiseStartedEvent)
+                    flowsheet.ProcessScripts(Scripts.EventType.IntegratorStarted, Scripts.ObjectType.Integrator, "");
                 started = true;
 
                 double controllersCheck = 100000;
                 double streamsCheck = 100000;
                 double pressureFlowCheck = 100000;
-                double simTime = 0;
+                double simTime = Math.Max(0.0, options.StartSimTime);
                 double currentStep = stepSeconds;
                 int step = 0;
                 var abortRun = false;
