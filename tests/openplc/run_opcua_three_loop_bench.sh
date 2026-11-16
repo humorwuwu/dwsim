@@ -40,7 +40,8 @@ chmod 0777 "$runtime_data"
 docker rm -f "$container_name" >/dev/null 2>&1 || true
 docker run --detach \
   --name "$container_name" \
-  --network host \
+  --publish 8443:8443 \
+  --publish 4840:4840 \
   --cap-add SYS_NICE \
   --cap-add SYS_RESOURCE \
   --volume "$runtime_data:/var/run/runtime" \
