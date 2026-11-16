@@ -58,8 +58,23 @@
   目标 `OpenPLC Runtime v4`；Runtime v4 源包、`image.conf` 和
   `conf/modbus_master.json` 均生成成功。
 - 复现：`bash tests/openplc/compile_editor_fixture.sh`；AppImage 固定校验和。
-- 当前仅证明 PLC 程序可由官方工具链编译，V-5.1.2–V-5.1.5 的 Runtime
-  容器闭环尚未执行。
+
+## V-5.1.2–V-5.1.4 OpenPLC 三回路闭环
+
+- Runtime：官方容器镜像
+  `ghcr.io/autonomy-logic/openplc-runtime@sha256:378deec33b371eb09f8344e714d88b48efc7387f631f793371ba9f6a6e381c9f`。
+- 流程：OpenPLC Editor 上传并编译项目 → Runtime v4 内 PLC 执行三回路 PI →
+  `modbus_master` 每 100 ms 通过 FC4 读取 `%IW0..2`、通过 FC16 写入 `%QW0..2`
+  → 确定性的温压液虚拟过程模型回写测量值。
+- 温度：80→85 °C 阶跃，超调 -2.16%（未越过 85 °C），稳态误差 0.389 K。
+- 压力：20→30 bar 阶跃，稳态误差 0.025 bar。
+- 液位：50→70% 阶跃，稳态误差 0.177%。
+- 结果：**PASS**（CI run `43823501386`，`openplc-compiler` job）。
+- 证据：[`tests/reports/closed-loop/v5.1.2-4-three-loop.csv`](../tests/reports/closed-loop/v5.1.2-4-three-loop.csv)，
+  记录 300 s、约 2 Hz 的时间序列。
+- 边界：过程模型按 H2sim Modbus 点表实现，但仍是独立虚拟台架，尚未接入
+  `DWSIM.Automation.Dynamics` 或真实 PLC 硬件。V-5.1.5 的 OPC UA 对照及后续
+  延迟、Shadow、联锁、时序和超时策略仍待完成。
 
 ## 本地 macOS（Mono 6.12，x86_64 / Rosetta）
 
@@ -109,7 +124,7 @@
 
 | 用例 | 依赖 |
 |---|---|
-| V-5.1.2 ~ V-5.1.10 | 完整 OpenPLC v4 PLC 程序与虚拟三回路 PID |
+| V-5.1.5 ~ V-5.1.10 | OPC UA 对照、延迟/丢包、Shadow、联锁、时序和超时策略 |
 | T-5.2 剩余数值回归 | Dinh 2021 原始曲线、R2 曲线、ALK 黄金数据 |
 | macOS 运行 | Gate 0 V-3 原生产物与 Rosetta 启动 |
 
