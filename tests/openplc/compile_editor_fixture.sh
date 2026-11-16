@@ -48,18 +48,38 @@ build_dir="$project/build/OpenPLC Runtime v4/src"
 test -f "$build_dir/program.st"
 test -f "$build_dir/pou_MAIN.cpp"
 test -f "$build_dir/image.conf"
-test -f "$build_dir/conf/modbus_master.json"
-
-jq -e '
-  length == 1 and
-  .[0].name == "H2sim" and
-  .[0].config.type == "SLAVE" and
-  .[0].config.io_points[0].fc == 4 and
-  .[0].config.io_points[0].iec_location == "%IW0" and
-  .[0].config.io_points[0].len == 3 and
-  .[0].config.io_points[1].fc == 16 and
-  .[0].config.io_points[1].iec_location == "%QW0" and
-  .[0].config.io_points[1].len == 3
-' "$build_dir/conf/modbus_master.json" >/dev/null
+if [[ -f "$project/devices/remote/H2sim.json" ]]; then
+  test -f "$build_dir/conf/modbus_master.json"
+  jq -e '
+    length == 1 and
+    .[0].name == "H2sim" and
+    .[0].config.type == "SLAVE" and
+    .[0].config.io_points[0].fc == 4 and
+    .[0].config.io_points[0].iec_location == "%IW0" and
+    .[0].config.io_points[0].len == 3 and
+    .[0].config.io_points[1].fc == 16 and
+    .[0].config.io_points[1].iec_location == "%QW0" and
+    .[0].config.io_points[1].len == 3
+  ' "$build_dir/conf/modbus_master.json" >/dev/null
+else
+  test -f "$build_dir/conf/opcua.json"
+  jq -e '
+    length == 1 and
+    [.[0].config.address_space.variables[].node_id] == [
+      "PLC.H2sim.Temperature_SP",
+      "PLC.H2sim.Temperature_PV",
+      "PLC.H2sim.Cooling_Output",
+      "PLC.H2sim.Pressure_SP",
+      "PLC.H2sim.Pressure_PV",
+      "PLC.H2sim.Backpressure_Output",
+      "PLC.H2sim.Level_SP",
+      "PLC.H2sim.Level_PV",
+      "PLC.H2sim.Level_Command"
+    ] and
+    (.[0].config.address_space.variables[] |
+      select(.node_id == "PLC.H2sim.Temperature_PV") |
+      .permissions.engineer == "rw")
+  ' "$build_dir/conf/opcua.json" >/dev/null
+fi
 
 printf 'PASS: OpenPLC Editor %s compiled the Runtime v4 three-loop fixture\n' "$editor_version"

@@ -1,0 +1,218 @@
+{
+  "meta": {
+    "name": "H2sim OPC UA Loops",
+    "type": "plc-project"
+  },
+  "data": {
+    "pous": [],
+    "dataTypes": [],
+    "libraries": [],
+    "servers": [
+      {
+        "name": "H2simOPC",
+        "protocol": "opcua",
+        "opcuaServerConfig": {
+          "server": {
+            "enabled": true,
+            "name": "H2sim OpenPLC OPC UA Server",
+            "applicationUri": "urn:h2sim:openplc:opcua",
+            "productUri": "urn:h2sim:runtime",
+            "bindAddress": "0.0.0.0",
+            "port": 4840,
+            "endpointPath": "/openplc/opcua"
+          },
+          "securityProfiles": [
+            {
+              "id": "h2sim-anonymous",
+              "name": "insecure",
+              "enabled": true,
+              "securityPolicy": "None",
+              "securityMode": "None",
+              "authMethods": [
+                "Anonymous"
+              ],
+              "anonymousRole": "engineer"
+            }
+          ],
+          "security": {
+            "serverCertificateStrategy": "auto_self_signed",
+            "serverCertificateCustom": null,
+            "serverPrivateKeyCustom": null,
+            "trustedClientCertificates": []
+          },
+          "users": [],
+          "cycleTimeMs": 100,
+          "addressSpace": {
+            "namespaceUri": "urn:h2sim:opcua",
+            "nodes": [
+              {
+                "id": "temperature-sp",
+                "pouName": "main",
+                "variablePath": "Temperature_SP",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Temperature_SP",
+                "browseName": "Temperature_SP",
+                "displayName": "Temperature setpoint",
+                "description": "PLC temperature setpoint in degrees Celsius",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "r",
+                  "engineer": "r"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "temperature-pv",
+                "pouName": "main",
+                "variablePath": "Temperature_PV",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Temperature_PV",
+                "browseName": "Temperature_PV",
+                "displayName": "Temperature process value",
+                "description": "Measured stack temperature in degrees Celsius",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "rw",
+                  "engineer": "rw"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "cooling-output",
+                "pouName": "main",
+                "variablePath": "Cooling_Output",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Cooling_Output",
+                "browseName": "Cooling_Output",
+                "displayName": "Cooling command",
+                "description": "PLC cooling command in percent",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "r",
+                  "engineer": "r"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "pressure-sp",
+                "pouName": "main",
+                "variablePath": "Pressure_SP",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Pressure_SP",
+                "browseName": "Pressure_SP",
+                "displayName": "Pressure setpoint",
+                "description": "PLC pressure setpoint in bar",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "r",
+                  "engineer": "r"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "pressure-pv",
+                "pouName": "main",
+                "variablePath": "Pressure_PV",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Pressure_PV",
+                "browseName": "Pressure_PV",
+                "displayName": "Pressure process value",
+                "description": "Measured pressure in bar",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "rw",
+                  "engineer": "rw"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "backpressure-output",
+                "pouName": "main",
+                "variablePath": "Backpressure_Output",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Backpressure_Output",
+                "browseName": "Backpressure_Output",
+                "displayName": "Pressure command",
+                "description": "PLC pressure-control command in percent",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "r",
+                  "engineer": "r"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "level-sp",
+                "pouName": "main",
+                "variablePath": "Level_SP",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Level_SP",
+                "browseName": "Level_SP",
+                "displayName": "Level setpoint",
+                "description": "PLC separator level setpoint in percent",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "r",
+                  "engineer": "r"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "level-pv",
+                "pouName": "main",
+                "variablePath": "Level_PV",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Level_PV",
+                "browseName": "Level_PV",
+                "displayName": "Level process value",
+                "description": "Measured separator level in percent",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "rw",
+                  "engineer": "rw"
+                },
+                "nodeType": "variable"
+              },
+              {
+                "id": "level-output",
+                "pouName": "main",
+                "variablePath": "Level_Command",
+                "variableType": "REAL",
+                "nodeId": "PLC.H2sim.Level_Command",
+                "browseName": "Level_Command",
+                "displayName": "Level command",
+                "description": "PLC level-control command in percent",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "r",
+                  "engineer": "r"
+                },
+                "nodeType": "variable"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "configuration": {
+      "resource": {
+        "tasks": [
+          {
+            "name": "task0",
+            "triggering": "Cyclic",
+            "interval": "T#100ms",
+            "priority": 1
+          }
+        ],
+        "instances": [
+          {
+            "name": "instance0",
+            "program": "main",
+            "task": "task0"
+          }
+        ],
+        "globalVariables": []
+      }
+    }
+  }
+}
