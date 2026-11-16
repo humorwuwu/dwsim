@@ -1,0 +1,19 @@
+# Digitized from Bzovsky and Kudriavtsev (2024), Fig. 6, DOI 10.3311/PPch.38170.
+# The paper uses Faraday efficiency = 1 for this comparison.
+# Columns: temperature_c,power_kw,reversible_voltage_v,expected_sec_kwh_per_kg_h2,relative_tolerance
+temperature_c,power_kw,reversible_voltage_v,expected_sec_kwh_per_kg_h2,relative_tolerance
+60,100,1.205,44.0,0.03
+60,300,1.205,48.5,0.03
+60,500,1.205,52.0,0.03
+60,700,1.205,55.0,0.03
+60,900,1.205,57.7,0.03
+70,100,1.194,43.4,0.03
+70,300,1.194,47.4,0.03
+70,500,1.194,50.8,0.03
+70,700,1.194,53.6,0.03
+70,900,1.194,56.3,0.03
+80,100,1.183,42.7,0.03
+80,300,1.183,46.6,0.03
+80,500,1.183,49.8,0.03
+80,700,1.183,52.8,0.03
+80,900,1.183,54.9,0.03

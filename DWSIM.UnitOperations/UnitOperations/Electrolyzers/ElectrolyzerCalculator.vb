@@ -25,12 +25,19 @@ Namespace UnitOperations
         Public Function CurrentForPower(powerKW As Double) As Double
 
             If Model Is Nothing Then Throw New InvalidOperationException("Electrochemical model is not set.")
+            If powerKW <= 0.0 Then Throw New ArgumentOutOfRangeException(NameOf(powerKW), "Target power must be positive.")
 
             Dim minimumPower = PowerAt(i_min)
             Dim maximumPower = PowerAt(i_max)
 
             If powerKW <= minimumPower Then Return i_min
-            If powerKW >= maximumPower Then Return i_max
+            If powerKW > maximumPower Then
+                Throw New ArgumentOutOfRangeException(
+                    NameOf(powerKW),
+                    String.Format(Globalization.CultureInfo.InvariantCulture,
+                                  "Target power {0:F3} kW exceeds this stack's maximum of {1:F3} kW.",
+                                  powerKW, maximumPower))
+            End If
 
             Dim target = powerKW
             Dim fx As Func(Of Double, Double) = Function(i) PowerAt(i) - target
@@ -47,12 +54,14 @@ Namespace UnitOperations
 
         End Function
 
-        ''' <summary>Faraday efficiency including the low-load penalty.</summary>
+        ''' <summary>
+        ''' Faraday efficiency at the configured reference value. Low-load gas crossover
+        ''' is accounted for separately by the electrolyzer KPI calculation.
+        ''' </summary>
         Public Function FaradayEfficiency(i As Double) As Double
 
             If i <= 0.0 Then Return 0.0
-            Dim load = Math.Min(1.0, i / Math.Max(i_min, 1.0E-9))
-            Return etaF_ref * (0.5 + 0.5 * load)
+            Return etaF_ref
 
         End Function
 
@@ -63,6 +72,26 @@ Namespace UnitOperations
             Return FaradayEfficiency(i) * i * A_cell * N_cells / (2.0 * F)
 
         End Function
+
+        ''' <summary>Cross-membrane gas flow (mol/s), increasing as load falls.</summary>
+        Public Function CrossoverMolarFlow(i As Double, crossoverCoeff As Double) As Double
+
+            If i <= 0.0 Then Return 0.0
+            Return Math.Max(crossoverCoeff, 0.0) / i
+
+        End Function
+
+        ''' <summary>Calculates both gas stream impurity concentrations in volume percent.</summary>
+        Public Sub GasPurity(i As Double, crossoverCoeff As Double,
+                             ByRef h2inO2 As Double, ByRef o2inH2 As Double)
+
+            Dim nH2 = HydrogenMolarFlow(i)
+            Dim nO2 = nH2 / 2.0
+            Dim crossover = CrossoverMolarFlow(i, crossoverCoeff)
+            h2inO2 = 100.0 * crossover / Math.Max(nO2 + crossover, 1.0E-12)
+            o2inH2 = 100.0 * crossover / Math.Max(nH2 + crossover, 1.0E-12)
+
+        End Sub
 
         ''' <summary>Specific energy consumption (kWh/kg H2).</summary>
         Public Function SpecificEnergyConsumption(powerKW As Double, i As Double) As Double

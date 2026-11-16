@@ -38,11 +38,17 @@ Namespace UnitOperations
             Dim pO2 = Math.Max(pAn, 1.0E-12)
             bd.U_ocv = U_rev + R * T / (2.0 * F) * Math.Log(pH2 * Math.Sqrt(pO2))
 
-            Dim i0 = i0_ref * Math.Exp(-E_act / R * (1.0 / T - 1.0 / T_ref))
-            Dim x = Math.Max(i, 0.0) / Math.Max(i0, 1.0E-30)
-            bd.U_act = R * T / (alpha * F) * Math.Log(x + Math.Sqrt(x * x + 1.0))
+            ' i0_ref is the pre-exponential factor k_i0,an from Bzovsky 2024 Eq. 13.
+            Dim i0 = i0_ref * Math.Exp(-E_act / (R * T))
+            Dim x = 0.5 * Math.Max(i, 0.0) / Math.Max(i0, 1.0E-30)
+            ' Bzovsky 2024 Eq. 12 has no additional alpha factor in asinh term.
+            bd.U_act = R * T / F * Math.Log(x + Math.Sqrt(x * x + 1.0))
 
-            Dim sigma = Math.Max((0.5139 * lambda_mem - 0.326) * Math.Exp(1268.0 * (1.0 / 303.0 - 1.0 / T)), 1.0E-6)
+            ' Bzovsky 2024 Table 4 and Fig. 2 use the 0.005139/0.00326 coefficients.
+            ' Anchor the temperature correction at 80 C so the published 1 MW/2.5 A/cm2
+            ' operating point remains calibrated. The previous coefficients were 100x too large.
+            Dim sigma = Math.Max((0.005139 * lambda_mem - 0.00326) *
+                                 Math.Exp(1268.0 * (1.0 / T_ref - 1.0 / T)), 1.0E-6)
             Dim rMem = t_mem / sigma
             Dim rElec = (rho_electrode / 1000.0) * t_electrode
             bd.U_ohm = i * (rMem + rElec)

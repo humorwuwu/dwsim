@@ -1,0 +1,7 @@
+# Analytical reference for the internal sub-stepping energy balance.
+# Columns: c_stack_j_k,u_loss_w_k,m_coolant_kg_s,t_initial_k,t_coolant_in_k,t_ambient_k,q_gen_w,t_seconds,expected_t_k
+c_stack_j_k,u_loss_w_k,m_coolant_kg_s,t_initial_k,t_coolant_in_k,t_ambient_k,q_gen_w,t_seconds,expected_t_k
+500000,50,0,353.15,298.15,298.15,10000,60,354.017395
+500000,0,1,353.15,298.15,298.15,0,60,331.455854
+500000,50,1,353.15,298.15,298.15,50000,60,335.961836
+500000,50,1,353.15,298.15,298.15,50000,600,310.239981

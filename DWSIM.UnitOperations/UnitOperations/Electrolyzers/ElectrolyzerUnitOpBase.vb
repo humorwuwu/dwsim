@@ -488,7 +488,8 @@ Namespace UnitOperations
             CellVoltage = bd.U_cell
             StackVoltage = bd.U_cell * N_cells
             CurrentDensity = currentDensityValue
-            Current = currentDensityValue * A_cell * N_cells
+            ' Cells are electrically in series: the stack current is the cell current.
+            Current = currentDensityValue * A_cell
             Power = bd.U_cell * currentDensityValue * A_cell * N_cells / 1000.0
             ReversibleVoltage = bd.U_rev
             ThermoneutralVoltage = bd.U_tn
@@ -504,10 +505,8 @@ Namespace UnitOperations
 
             Dim nH2 = calculator.HydrogenMolarFlow(currentDensityValue)
             Dim o2Produced = nH2 / 2.0
-            Dim crossover = ParameterValue("crossover_coeff", 0.0) / Math.Max(currentDensityValue, 1.0E-6)
-
-            H2inO2 = 100.0 * crossover / Math.Max(o2Produced + crossover, 1.0E-12)
-            O2inH2 = 100.0 * crossover / Math.Max(nH2 + crossover, 1.0E-12)
+            calculator.GasPurity(currentDensityValue, ParameterValue("crossover_coeff", 0.0),
+                                 H2inO2, O2inH2)
             H2Purity = 100.0 - O2inH2
 
             UpdateInterlocks(H2inO2, O2inH2, T, pCat - pAn, ParameterValue("WaterLevel", 100.0))

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -66,6 +67,10 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestOpcUaClosedLoop(flowsheet);
             TestElectrolyzerDiscovery();
             TestElectrochemicalModel();
+            TestElectrochemicalGoldenData();
+            TestSpecificEnergyConsumptionGoldenData();
+            TestThermalGoldenData();
+            TestGasPurityRegression();
             TestInterlocks();
             TestDynamicSupport();
             TestDynamicSamples();
@@ -80,7 +85,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             try
             {
                 Directory.CreateDirectory(outputDirectory);
-                GeneratePlant(outputDirectory, "PEM Electrolysis Plant.dwxmz", new PEMElectrolyzer(), 1000.0, 30.0, 2.0);
+                GeneratePlant(outputDirectory, "PEM Electrolysis Plant.dwxmz", new PEMElectrolyzer(), 900.0, 30.0, 2.0);
                 GeneratePlant(outputDirectory, "Alkaline Electrolysis Plant.dwxmz", new AlkalineElectrolyzer(), 3000.0, 16.0, 16.0);
                 return 0;
             }
@@ -134,6 +139,8 @@ namespace DWSIM.Automation.Dynamics.Tests
             unit.Parameters["SetpointMode"].Value = 0.0;
             unit.Parameters["P_cat"].Value = pCat;
             unit.Parameters["P_an"].Value = pAn;
+            if (unit is AlkalineElectrolyzer)
+                unit.Parameters["A_cell"].Value = 17600.0;
 
             flowsheet.ConnectObjects(feed.GraphicObject, unit.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(coolingIn.GraphicObject, unit.GraphicObject, 0, 1);
@@ -215,6 +222,12 @@ namespace DWSIM.Automation.Dynamics.Tests
                     {
                         Console.WriteLine("plant {0}: power={1} kW, H2 purity={2}%",
                             Path.GetFileName(file), unit.Power, unit.H2Purity);
+                        var targetPower = unit is AlkalineElectrolyzer ? 3000.0 : 900.0;
+                        Check(Math.Abs(unit.Power - targetPower) / targetPower < 0.03,
+                            "plant electrolyzer power follows template rating: " + Path.GetFileName(file) +
+                            " " + unit.Power + " kW vs " + targetPower + " kW");
+                        Check(Math.Abs(unit.Current - unit.CurrentDensity * unit.Parameters["A_cell"].Value) < 1e-6,
+                            "plant stack current uses series-cell current: " + Path.GetFileName(file));
                     }
 
                     var storage = flowsheet.SimulationObjects.Values.OfType<HydrogenStorage>().FirstOrDefault();
@@ -358,6 +371,17 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(calculator.HydrogenMolarFlow(currentDensity) > 0.0, "positive hydrogen flow");
             Check(calculator.SpecificEnergyConsumption(targetPower, currentDensity) > 0.0, "positive SEC");
 
+            var rejectedOverload = false;
+            try
+            {
+                calculator.CurrentForPower(calculator.PowerAt(calculator.i_max) + 1.0);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                rejectedOverload = true;
+            }
+            Check(rejectedOverload, "unreachable stack power is rejected");
+
             var alkaline = new AlkalineElectrolyzer();
             Check(alkaline.CreateElectrochemicalModel() is ModelAlkaline_SemiEmpirical, "alkaline model factory");
 
@@ -373,6 +397,171 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(units.voltage == "V" && units.current == "A" && units.currentDensity == "A/cm2", "electrical unit properties");
             Check(units.GetUnitType("V") == UnitOfMeasure.voltage, "voltage unit type");
             Check(units.GetCurrentUnits(UnitOfMeasure.currentDensity) == "A/cm2", "current density units");
+        }
+
+        private static void TestElectrochemicalGoldenData()
+        {
+            var candidates = new[]
+            {
+                Path.Combine("electrolyzers", "bzovsky_2024_polarization.csv"),
+                Path.Combine("tests", "electrolyzers", "bzovsky_2024_polarization.csv")
+            };
+            var path = candidates.FirstOrDefault(File.Exists);
+            Check(path != null, "Bzovsky 2024 polarization fixture found");
+            if (path == null) return;
+
+            var rows = 0;
+            foreach (var raw in File.ReadLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("temperature_c,")) continue;
+
+                var parts = line.Split(',');
+                if (parts.Length != 5)
+                {
+                    Check(false, "invalid polarization fixture row: " + line);
+                    continue;
+                }
+
+                var temperatureC = double.Parse(parts[0], CultureInfo.InvariantCulture);
+                var currentDensity = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                var reversibleVoltage = double.Parse(parts[2], CultureInfo.InvariantCulture);
+                var expectedVoltage = double.Parse(parts[3], CultureInfo.InvariantCulture);
+                var tolerance = double.Parse(parts[4], CultureInfo.InvariantCulture);
+
+                var model = new ModelPEM_Springer { U_rev = reversibleVoltage, U_tn = 1.48 };
+                var actual = model.CellVoltage(currentDensity, temperatureC + 273.15, 30.0, 2.0).U_cell;
+                var relativeError = Math.Abs(actual - expectedVoltage) / expectedVoltage;
+                rows++;
+                Check(relativeError <= tolerance,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "Bzovsky polarization {0:F0} C, {1:F2} A/cm2: expected {2:F4} V, got {3:F4} V ({4:P2})",
+                        temperatureC, currentDensity, expectedVoltage, actual, relativeError));
+            }
+
+            Check(rows == 18, "Bzovsky polarization fixture has 18 points");
+        }
+
+        private static void TestSpecificEnergyConsumptionGoldenData()
+        {
+            var candidates = new[]
+            {
+                Path.Combine("electrolyzers", "bzovsky_2024_sec.csv"),
+                Path.Combine("tests", "electrolyzers", "bzovsky_2024_sec.csv")
+            };
+            var path = candidates.FirstOrDefault(File.Exists);
+            Check(path != null, "Bzovsky 2024 SEC fixture found");
+            if (path == null) return;
+
+            var rows = 0;
+            foreach (var raw in File.ReadLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("temperature_c,")) continue;
+
+                var parts = line.Split(',');
+                if (parts.Length != 5)
+                {
+                    Check(false, "invalid SEC fixture row: " + line);
+                    continue;
+                }
+
+                var temperatureC = double.Parse(parts[0], CultureInfo.InvariantCulture);
+                var powerKW = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                var reversibleVoltage = double.Parse(parts[2], CultureInfo.InvariantCulture);
+                var expectedSec = double.Parse(parts[3], CultureInfo.InvariantCulture);
+                var tolerance = double.Parse(parts[4], CultureInfo.InvariantCulture);
+
+                var model = new ModelPEM_Springer { U_rev = reversibleVoltage, U_tn = 1.48 };
+                var calculator = new ElectrolyzerCalculator
+                {
+                    Model = model,
+                    A_cell = 1000.0,
+                    N_cells = 182.0,
+                    i_min = 0.25,
+                    i_max = 2.5,
+                    T = temperatureC + 273.15,
+                    pCat = 30.0,
+                    pAn = 2.0,
+                    etaF_ref = 1.0
+                };
+                var currentDensity = calculator.CurrentForPower(powerKW);
+                var actualSec = calculator.SpecificEnergyConsumption(powerKW, currentDensity);
+                var relativeError = Math.Abs(actualSec - expectedSec) / expectedSec;
+                rows++;
+                Check(relativeError <= tolerance,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "Bzovsky SEC {0:F0} C, {1:F0} kW: expected {2:F3} kWh/kg, got {3:F3} ({4:P2})",
+                        temperatureC, powerKW, expectedSec, actualSec, relativeError));
+            }
+
+            Check(rows == 15, "Bzovsky SEC fixture has 15 points");
+        }
+
+        private static void TestThermalGoldenData()
+        {
+            var candidates = new[]
+            {
+                Path.Combine("electrolyzers", "thermal_lumped_reference.csv"),
+                Path.Combine("tests", "electrolyzers", "thermal_lumped_reference.csv")
+            };
+            var path = candidates.FirstOrDefault(File.Exists);
+            Check(path != null, "thermal reference fixture found");
+            if (path == null) return;
+
+            var rows = 0;
+            foreach (var raw in File.ReadLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("c_stack_j_k,")) continue;
+
+                var parts = line.Split(',');
+                if (parts.Length != 9)
+                {
+                    Check(false, "invalid thermal fixture row: " + line);
+                    continue;
+                }
+
+                double P(int index) => double.Parse(parts[index], CultureInfo.InvariantCulture);
+                var pem = new PEMElectrolyzer();
+                pem.Parameters["C_stack"].Value = P(0);
+                pem.Parameters["U_loss_area"].Value = P(1);
+                var actual = pem.IntegrateStackTemperature(P(3), P(7), P(6), P(2), 4180.0, P(4), P(5));
+                var expected = P(8);
+                var relativeError = Math.Abs(actual - expected) / expected;
+                rows++;
+                Check(relativeError < 0.01,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "lumped thermal case {0}: expected {1:F4} K, got {2:F4} K ({3:P2})",
+                        rows, expected, actual, relativeError));
+            }
+
+            Check(rows == 4, "thermal fixture has 4 points");
+        }
+
+        private static void TestGasPurityRegression()
+        {
+            var model = new ModelPEM_Springer { U_rev = 1.183, U_tn = 1.48 };
+            var calculator = new ElectrolyzerCalculator
+            {
+                Model = model,
+                A_cell = 1000.0,
+                N_cells = 182.0,
+                i_min = 0.25,
+                i_max = 2.5,
+                T = 353.15,
+                pCat = 30.0,
+                pAn = 2.0,
+                etaF_ref = 0.99
+            };
+
+            double lowH2inO2 = 0.0, ignored = 0.0;
+            double ratedH2inO2 = 0.0, ignored2 = 0.0;
+            calculator.GasPurity(0.02, 1e-5, ref lowH2inO2, ref ignored);
+            calculator.GasPurity(2.5, 1e-5, ref ratedH2inO2, ref ignored2);
+            Check(lowH2inO2 > 4.0, "low-load H2-in-O2 exceeds the 4 vol% LEL");
+            Check(ratedH2inO2 < lowH2inO2, "H2-in-O2 falls as load rises");
+            Check(lowH2inO2 <= 100.0 && ratedH2inO2 >= 0.0, "gas impurity stays in percent bounds");
         }
 
         private static void TestBridgeHost(IFlowsheet flowsheet)
