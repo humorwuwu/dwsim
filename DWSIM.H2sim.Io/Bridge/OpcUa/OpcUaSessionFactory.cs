@@ -26,7 +26,7 @@ namespace DWSIM.H2sim.Io
                 Configuration = application
                     .Build("urn:h2sim:client", "urn:h2sim:client")
                     .AsClient()
-                    .AddSecurityConfiguration("CN=H2sim", null, null, null)
+                    .AddSecurityConfiguration("CN=H2sim, DC=localhost", null, null, null)
                     .SetAutoAcceptUntrustedCertificates(true)
                     .SetAddAppCertToTrustedStore(true)
                     .Create()
@@ -43,10 +43,10 @@ namespace DWSIM.H2sim.Io
                     .Build("urn:h2sim:client", "urn:h2sim:client")
                     .AsClient()
                     .AddSecurityConfiguration(
-                        "CN=H2sim",
+                        "CN=H2sim, DC=localhost",
                         pkiRoot,
-                        Path.Combine(pkiRoot, "rejected"),
-                        Path.Combine(pkiRoot, "issuer"))
+                        Path.Combine(pkiRoot, "own"),
+                        Path.Combine(pkiRoot, "rejected"))
                     .SetAutoAcceptUntrustedCertificates(true)
                     .SetAddAppCertToTrustedStore(true)
                     .Create()
