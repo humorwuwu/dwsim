@@ -1,0 +1,77 @@
+{
+  "name": "H2sim",
+  "protocol": "modbus-tcp",
+  "modbusTcpConfig": {
+    "transport": "tcp",
+    "host": "127.0.0.1",
+    "port": 1502,
+    "slaveId": 1,
+    "timeout": 1000,
+    "ioGroups": [
+      {
+        "id": "inputs",
+        "name": "H2sim measurements",
+        "functionCode": "4",
+        "cycleTime": 100,
+        "offset": "0",
+        "length": 3,
+        "errorHandling": "set-to-zero",
+        "ioPoints": [
+          {
+            "id": "temperature",
+            "name": "Temperature PV",
+            "type": "INT",
+            "iecLocation": "%IW0",
+            "alias": "H2sim_Temperature"
+          },
+          {
+            "id": "pressure",
+            "name": "Pressure PV",
+            "type": "INT",
+            "iecLocation": "%IW1",
+            "alias": "H2sim_Pressure"
+          },
+          {
+            "id": "level",
+            "name": "Level PV",
+            "type": "INT",
+            "iecLocation": "%IW2",
+            "alias": "H2sim_Level"
+          }
+        ]
+      },
+      {
+        "id": "outputs",
+        "name": "H2sim commands",
+        "functionCode": "16",
+        "cycleTime": 100,
+        "offset": "0",
+        "length": 3,
+        "errorHandling": "set-to-zero",
+        "ioPoints": [
+          {
+            "id": "cooling",
+            "name": "Cooling command",
+            "type": "INT",
+            "iecLocation": "%QW0",
+            "alias": "H2sim_Cooling"
+          },
+          {
+            "id": "backpressure",
+            "name": "Backpressure command",
+            "type": "INT",
+            "iecLocation": "%QW1",
+            "alias": "H2sim_Backpressure"
+          },
+          {
+            "id": "drain",
+            "name": "Drain command",
+            "type": "INT",
+            "iecLocation": "%QW2",
+            "alias": "H2sim_Drain"
+          }
+        ]
+      }
+    ]
+  }
+}

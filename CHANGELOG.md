@@ -10,6 +10,8 @@
   four lumped thermal cases and a low-load gas-crossover/LEL trend test.
 - OpenPLC Runtime v4 integration probes for the official Modbus `modbus_master`
   plugin and OPC UA server manager, pinned to upstream commit `9fb5e1a`.
+- A three-loop OpenPLC Runtime v4 PLC fixture for temperature, pressure and
+  level control, compiled in CI with the pinned OpenPLC Editor 4.3.5 toolchain.
 
 ### Fixed
 

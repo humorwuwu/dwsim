@@ -48,6 +48,19 @@
 - 结果：本地测试探针通过；CI 步骤已加入 `build-windows.yml`。
 - 未覆盖：Basic256Sha256 + Username、错误角色拒绝、断线重连。
 
+## OpenPLC 三回路 PLC 程序编译
+
+- 项目源：`tests/openplc/h2sim-three-loop/`，包含温度、压力、液位三个
+  PI 回路，100 ms 任务周期，分段执行 80→85 °C、20→30 bar、50→70% 设定值阶跃。
+- Modbus master：官方 `modbus_master` 每 100 ms 读取 FC4 `%IW0..2`，
+  并通过 FC16 写回 `%QW0..2`；模型故障哨兵 `-32768` 会复位积分项。
+- 编译：OpenPLC Editor `4.3.5` headless CLI + STruC++ `0.8.0`，
+  目标 `OpenPLC Runtime v4`；Runtime v4 源包、`image.conf` 和
+  `conf/modbus_master.json` 均生成成功。
+- 复现：`bash tests/openplc/compile_editor_fixture.sh`；AppImage 固定校验和。
+- 当前仅证明 PLC 程序可由官方工具链编译，V-5.1.2–V-5.1.5 的 Runtime
+  容器闭环尚未执行。
+
 ## 本地 macOS（Mono 6.12，x86_64 / Rosetta）
 
 - `DWSIM.H2sim.Io.Tests`：**PASS**。覆盖 SignalMap 序列化/校验、缩放方向、NModbus 真实 TCP 自环。

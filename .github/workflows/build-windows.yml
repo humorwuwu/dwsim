@@ -155,3 +155,12 @@ jobs:
           name: h2sim-plant-samples
           path: DistPackages/Windows/generated-samples/*.dwxmz
           if-no-files-found: error
+
+  openplc-compiler:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile three-loop PLC fixture with OpenPLC Editor
+        run: bash tests/openplc/compile_editor_fixture.sh
