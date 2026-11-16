@@ -155,7 +155,7 @@ async def run(args):
         report = Path(args.report)
         report.parent.mkdir(parents=True, exist_ok=True)
         with report.open("w", newline="", encoding="utf-8") as handle:
-            writer = csv.DictWriter(handle, fieldnames=list(samples[0]))
+            writer = csv.DictWriter(handle, fieldnames=list(samples[0]), lineterminator="\n")
             writer.writeheader()
             writer.writerows(samples)
 
