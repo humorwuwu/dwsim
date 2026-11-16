@@ -13,6 +13,8 @@
 - A three-loop OpenPLC Runtime v4 PLC fixture for temperature, pressure and
   level control, compiled in CI with the pinned OpenPLC Editor 4.3.5 toolchain
   and exercised against a 300-second Modbus virtual bench.
+- An OPC UA version of the three-loop fixture and a Modbus parity run whose
+  temperature, pressure and level results agree within 0.25% of their spans.
 
 ### Fixed
 

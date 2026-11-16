@@ -66,15 +66,29 @@
 - 流程：OpenPLC Editor 上传并编译项目 → Runtime v4 内 PLC 执行三回路 PI →
   `modbus_master` 每 100 ms 通过 FC4 读取 `%IW0..2`、通过 FC16 写入 `%QW0..2`
   → 确定性的温压液虚拟过程模型回写测量值。
-- 温度：80→85 °C 阶跃，超调 -2.16%（未越过 85 °C），稳态误差 0.389 K。
+- 温度：80→85 °C 阶跃，超调 -0.95%（未越过 85 °C），稳态误差 0.329 K。
 - 压力：20→30 bar 阶跃，稳态误差 0.025 bar。
-- 液位：50→70% 阶跃，稳态误差 0.177%。
-- 结果：**PASS**（CI run `43823501386`，`openplc-compiler` job）。
+- 液位：50→70% 阶跃，稳态误差 0.174%。
+- 结果：**PASS**（CI run `43832938483`，`openplc-compiler` job）。
 - 证据：[`tests/reports/closed-loop/v5.1.2-4-three-loop.csv`](../tests/reports/closed-loop/v5.1.2-4-three-loop.csv)，
-  记录 300 s、约 2 Hz 的时间序列。
-- 边界：过程模型按 H2sim Modbus 点表实现，但仍是独立虚拟台架，尚未接入
-  `DWSIM.Automation.Dynamics` 或真实 PLC 硬件。V-5.1.5 的 OPC UA 对照及后续
-  延迟、Shadow、联锁、时序和超时策略仍待完成。
+  记录 300 s、约 2 Hz 的时间序列。温度输入和模拟执行器采用 0.01 °C / 0.01%
+  分辨率，消除了 0.1 °C 量化造成的闭环死区。
+
+## V-5.1.5 Modbus / OPC UA 三回路对照
+
+- H2sim 作为 OPC UA client 连接 OpenPLC v4 内置 server，写三个过程量、读取
+  三个控制输出；OPC UA 测试项目由 OpenPLC Editor 4.3.5 官方编译链生成。
+- PLC 周期计数作为测试 epoch 在 OPC UA 客户端连接时清零，使两套协议在相同
+  的 600/1200/1800 拍设定值序列上运行。
+- OPC UA 温度峰值 `84.951 °C`、稳态 `84.659 °C`；压力 `29.977 bar`；
+  液位 `69.843%`。
+- 相对 Modbus：温度峰值差 `0.0011 K`（`0.022%`）、温度稳态差 `0.0122 K`
+  （`0.244%`）、压力差 `0.0013 bar`（`0.013%`）、液位差 `0.0170%`
+  （`0.085%`），全部 <2%。
+- 结果：**PASS**（CI run `43832938483`，`openplc-compiler` job）。
+- 证据：[`tests/reports/closed-loop/v5.1.5-three-loop-opcua.csv`](../tests/reports/closed-loop/v5.1.5-three-loop-opcua.csv)。
+- 边界：仍是独立虚拟过程模型，未接入 `DWSIM.Automation.Dynamics`；OPC UA
+  Anonymous/engineer 仅用于隔离测试，正式部署需收紧为用户名或证书权限。
 
 ## 本地 macOS（Mono 6.12，x86_64 / Rosetta）
 
@@ -124,7 +138,7 @@
 
 | 用例 | 依赖 |
 |---|---|
-| V-5.1.5 ~ V-5.1.10 | OPC UA 对照、延迟/丢包、Shadow、联锁、时序和超时策略 |
+| V-5.1.6 ~ V-5.1.10 | 延迟/丢包、Shadow、联锁、时序和超时策略 |
 | T-5.2 剩余数值回归 | Dinh 2021 原始曲线、R2 曲线、ALK 黄金数据 |
 | macOS 运行 | Gate 0 V-3 原生产物与 Rosetta 启动 |
 
