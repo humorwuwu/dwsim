@@ -65,7 +65,7 @@ jobs:
         if: matrix.Configuration == 'Release'
         shell: pwsh
         run: |
-          Copy-Item DWSIM.H2sim.Io.Tests\bin\x64\Release\* DistPackages\Windows\ -Force
+          Copy-Item DWSIM.H2sim.Io.Tests\bin\x64\Release\* DistPackages\Windows\ -Recurse -Force
           Push-Location DistPackages\Windows
           try {
             .\DWSIM.H2sim.Io.Tests.exe
@@ -80,7 +80,7 @@ jobs:
         run: |
           git init .openplc-runtime
           git -C .openplc-runtime remote add origin https://github.com/autonomy-logic/openplc-runtime.git
-          git -C .openplc-runtime fetch --depth 1 origin 9fb5e1a
+          git -C .openplc-runtime fetch --depth 1 origin 9fb5e1a29b574806f5aea3a4e78202c7a5d658ee
           git -C .openplc-runtime checkout --detach FETCH_HEAD
           python -m pip install -r .openplc-runtime/core/src/drivers/plugins/python/modbus_master/requirements.txt
           python -m pip install -r .openplc-runtime/core/src/drivers/plugins/python/opcua/requirements.txt
@@ -114,7 +114,7 @@ jobs:
           try {
             Copy-Item DWSIM.H2sim.Io\bin\x64\Release\* DistPackages\Windows\ -Force
             Copy-Item packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll DistPackages\Windows\ -Force
-            Copy-Item DWSIM.Automation.Dynamics.Tests\bin\x64\Release\* DistPackages\Windows\ -Force
+            Copy-Item DWSIM.Automation.Dynamics.Tests\bin\x64\Release\* DistPackages\Windows\ -Recurse -Force
             Push-Location DistPackages\Windows
             try {
               .\DWSIM.Automation.Dynamics.Tests.exe "samples\Dynamic Simulation - Water Tank Level Control.dwxmz"
