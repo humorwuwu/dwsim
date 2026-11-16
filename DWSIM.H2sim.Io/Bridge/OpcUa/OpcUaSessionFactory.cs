@@ -21,24 +21,37 @@ namespace DWSIM.H2sim.Io
                 ApplicationType = ApplicationType.Client
             };
 
-            var pkiRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "H2sim",
-                "pki");
-            Directory.CreateDirectory(pkiRoot);
-
-            Configuration = application
-                .Build("urn:h2sim:client", "urn:h2sim:client")
-                .AsClient()
-                .AddSecurityConfiguration(
-                    "CN=H2sim",
-                    pkiRoot,
-                    Path.Combine(pkiRoot, "rejected"),
-                    Path.Combine(pkiRoot, "issuer"))
-                .SetAutoAcceptUntrustedCertificates(true)
-                .SetAddAppCertToTrustedStore(true)
-                .Create()
-                .GetAwaiter().GetResult();
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                Configuration = application
+                    .Build("urn:h2sim:client", "urn:h2sim:client")
+                    .AsClient()
+                    .AddSecurityConfiguration("CN=H2sim", null, null, null)
+                    .SetAutoAcceptUntrustedCertificates(true)
+                    .SetAddAppCertToTrustedStore(true)
+                    .Create()
+                    .GetAwaiter().GetResult();
+            }
+            else
+            {
+                var pkiRoot = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "H2sim",
+                    "pki");
+                Directory.CreateDirectory(pkiRoot);
+                Configuration = application
+                    .Build("urn:h2sim:client", "urn:h2sim:client")
+                    .AsClient()
+                    .AddSecurityConfiguration(
+                        "CN=H2sim",
+                        pkiRoot,
+                        Path.Combine(pkiRoot, "rejected"),
+                        Path.Combine(pkiRoot, "issuer"))
+                    .SetAutoAcceptUntrustedCertificates(true)
+                    .SetAddAppCertToTrustedStore(true)
+                    .Create()
+                    .GetAwaiter().GetResult();
+            }
             Configuration.CertificateValidator.CertificateValidation += (sender, e) => e.Accept = true;
             application.CheckApplicationInstanceCertificate(true, 2048).GetAwaiter().GetResult();
 
