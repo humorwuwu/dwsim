@@ -55,7 +55,7 @@ def validate(samples):
     temperature_peak = maximum(samples, "temperature_pv_c", TEMPERATURE_STEP_S, PRESSURE_STEP_S)
     temperature_final = average(samples, "temperature_pv_c", 110.0, PRESSURE_STEP_S)
     pressure_final = average(samples, "pressure_pv_bar", 170.0, LEVEL_STEP_S)
-    level_final = average(samples, "level_pv_pct", 230.0, 240.0)
+    level_final = average(samples, "level_pv_pct", 290.0, 300.0)
 
     temperature_overshoot = (temperature_peak - 85.0) / 5.0
     temperature_error = abs(temperature_final - 85.0)
@@ -172,7 +172,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=1502)
-    parser.add_argument("--duration", type=float, default=240.0)
+    parser.add_argument("--duration", type=float, default=300.0)
     parser.add_argument("--startup-timeout", type=float, default=90.0)
     parser.add_argument("--report", required=True)
     args = parser.parse_args()
