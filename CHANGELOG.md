@@ -2,6 +2,27 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.2.1] - 2026-11-16
+
+### Added
+
+- Bzovsky 2024 numerical regression data: 18 polarization points, 15 SEC points,
+  four lumped thermal cases and a low-load gas-crossover/LEL trend test.
+- OpenPLC Runtime v4 integration probes for the official Modbus `modbus_master`
+  plugin and OPC UA server manager, pinned to upstream commit `9fb5e1a`.
+
+### Fixed
+
+- PEM exchange-current, activation and membrane-conductivity equations now follow
+  the published Bzovsky 2024 expressions instead of the previous transcription errors.
+- Power targets above a stack's reachable maximum now fail explicitly instead of
+  silently clamping to the maximum current density.
+- Stack `Current` now reports series-cell current rather than multiplying by cell count.
+- OPC UA client certificates are stored under the user's local application data
+  directory instead of an unwritable system-wide path.
+- Plant templates now use a 900 kW PEM operating point and a 17600 cm2 alkaline
+  cell area so their requested ratings are reachable.
+
 ## [0.2.0] - 2026-11-15
 
 ### Added
