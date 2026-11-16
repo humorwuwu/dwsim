@@ -164,3 +164,13 @@ jobs:
 
       - name: Compile three-loop PLC fixture with OpenPLC Editor
         run: bash tests/openplc/compile_editor_fixture.sh
+
+      - name: Run three-loop OpenPLC Runtime v4 virtual bench
+        run: bash tests/openplc/run_three_loop_bench.sh
+
+      - name: Upload three-loop closed-loop evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2sim-openplc-three-loop
+          path: tests/reports/closed-loop/v5.1.2-4-three-loop.csv
+          if-no-files-found: error
