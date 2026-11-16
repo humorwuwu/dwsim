@@ -1,0 +1,10 @@
+# Specific conductivity of KOH from Gambou et al. (2022), Energies 15(9):3452,
+# Equation 41, Table 6 and Figure 8, DOI 10.3390/en15093452.
+# Columns: temperature_c,koh_mass_fraction,conductivity_s_m,relative_tolerance
+temperature_c,koh_mass_fraction,conductivity_s_m,relative_tolerance
+50,0.20,82.876407,0.001
+50,0.25,90.992997,0.001
+25,0.30,63.783436,0.001
+50,0.30,94.081249,0.001
+80,0.30,136.093786,0.001
+50,0.35,92.518183,0.001

@@ -38,10 +38,13 @@
 | `KOH_wt` | 0.30 | — | KOH 质量分数 |
 | `i_max` | 0.4 | A/cm2 | 最大电流密度 |
 
-`ModelAlkaline_SemiEmpirical` 的 `a_act`、`b_act`、`R_ohm_ref`、`E_act_ohm`
-和 `crossover_coeff` 仍是待标定值，等 R9（电导率关联式）和 R2（气体穿透）
-数据校准。PEM 极化曲线已由 Bzovsky 2024 Fig. 2 的 18 个数字化点回归，
-SEC 已由 Fig. 6 的 15 个数字化点回归；动态热行为回归仍在补充。
+KOH 电导率使用 R9/Gambou 2022 的 Equation 41 关联式，适用范围为
+258.15–373.15 K、KOH 质量分数 0.15–0.45；25/50/80 °C 的 6 个图值已加入
+CI 数值回归。`ModelAlkaline_SemiEmpirical` 的 `a_act`、`b_act`、
+`R_ohm_ref`、`E_act_ohm` 和 `crossover_coeff` 仍是待标定值，等 R9
+极化参数和 R2（气体穿透）数据校准。PEM 极化曲线已由 Bzovsky 2024 Fig. 2
+的 18 个数字化点回归，SEC 已由 Fig. 6 的 15 个数字化点回归；动态热行为回归
+仍在补充。
 动态热积分已有 4 个解析基准点（含 60 s/600 s 大步长），用于约束内部子步稳定性；
 与 Dinh 2021 的时间常数对比仍需论文原始曲线。
 

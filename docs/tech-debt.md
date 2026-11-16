@@ -7,7 +7,7 @@
 - `NModbus` / `OPCFoundation.NetStandard.Opc.Ua.Client` 包等到 T-3.4/T-3.5 再加，避免 T-3.2 引入未使用的依赖冲突。
 - 6 个动态样例中 5 个已进入 headless 冒烟；PFR 样例因步长/停留时间不匹配跳过。数值回归基准尚未采集。
 - Gate 0 V-3（macOS + Mono）仍未验证。
-- T-1.2 的 ALK 半经验系数（`a_act`/`b_act`/`R_ohm_ref`/`E_act_ohm`）和 `crossover_coeff` 仍是待标定值，等 R9/R2 数据校准。PEM 已加入 Bzovsky 2024 Fig. 2 的 18 点 <2% 极化回归、Fig. 6 的 15 点 <3% SEC 回归、4 点热积分解析回归和低载 LEL 趋势测试；与 Dinh 2021 曲线、R2 数值曲线仍待补齐。
+- T-1.2 的 ALK 半经验极化系数（`a_act`/`b_act`/`R_ohm_ref`/`E_act_ohm`）和 `crossover_coeff` 仍是待标定值；KOH 电导率已改用 R9/Gambou 2022 Equation 41，并加入 6 点数值回归。PEM 已加入 Bzovsky 2024 Fig. 2 的 18 点 <2% 极化回归、Fig. 6 的 15 点 <3% SEC 回归、4 点热积分解析回归和低载 LEL 趋势测试；ALK 极化/SEC、Dinh 2021 热曲线与 R2 数值曲线仍待补齐。
 - 外部 UO 图形保存的 `<Description>` 为空、`Tag` 不带 UO 前缀，加载时注册表匹配不到，改由保存的输入/输出数量重建通用连接点，UO 的 `LoadData` 再复用；生成器以后应把 `GraphicObject.Description` 写成 UO 描述。
 - 电解槽的 `Calculate` 已有 PEM/ALK 模板和 CI 加载/计算冒烟；模板含 H2 纯化/储罐，但 G/L 分离和两级压缩尚未接入。PEM 额定点按论文 925 kW 上限取 900 kW，ALK 厂级模板使用 17600 cm2 单电池面积；完整质量/能量守恒回归仍待补齐。
 - V-5.1.2 ~ V-5.1.10 需要完整 OpenPLC v4 程序与真实主站；已增加 OpenPLC v4 官方 `modbus_master` 的 FC4/FC16 探针（V-5.1.1b）和官方 OPC UA server manager 的读写探针（V-3.5b），但仍未完成 PLC 内三回路 PID。

@@ -36,12 +36,41 @@ Namespace UnitOperations
         Public Property UseKOHConductivity As Boolean = True
 
         ''' <summary>
-        ''' Placeholder KOH conductivity correlation (S/cm), fitted to ~1.3 S/cm at
-        ''' 30 wt% and 80 C. Replace with the R9 correlation in T-2.1 calibration.
+        ''' Specific conductivity of a KOH solution in S/cm from Gambou et al. (2022),
+        ''' Energies 15(9):3452, Equation 41 and Table 6. The correlation is valid for
+        ''' 258.15-373.15 K and 0.15-0.45 KOH mass fraction.
         ''' </summary>
         Public Function ConductivityKOH(wt As Double, T As Double) As Double
-            Dim baseSigma = 0.5 + 2.667 * Math.Max(0.0, Math.Min(wt, 0.5))
-            Return baseSigma * Math.Exp(-2000.0 * (1.0 / T - 1.0 / 353.15))
+
+            Const K1 As Double = 27.9844803
+            Const K2 As Double = -0.924129482
+            Const K3 As Double = -0.0149660371
+            Const K4 As Double = -0.0905209551
+            Const K5 As Double = 0.0114933252
+            Const K6 As Double = 0.1765
+            Const K7 As Double = 6.96648518
+            Const K8 As Double = -2898.15658
+
+            If wt < 0.15 OrElse wt > 0.45 Then
+                Throw New ArgumentOutOfRangeException(
+                    NameOf(wt), wt, "KOH mass fraction must be between 0.15 and 0.45.")
+            End If
+            If T < 258.15 OrElse T > 373.15 Then
+                Throw New ArgumentOutOfRangeException(
+                    NameOf(T), T, "KOH conductivity correlation is valid from 258.15 to 373.15 K.")
+            End If
+
+            Dim concentration = 100.0 * wt
+            Dim conductivityS_m = K1 * concentration +
+                                  K2 * T +
+                                  K3 * T * T +
+                                  K4 * T * concentration +
+                                  K5 * T * T * Math.Pow(concentration, K6) +
+                                  K7 * T / concentration +
+                                  K8 * concentration / T
+
+            Return conductivityS_m / 100.0
+
         End Function
 
         Public Function CellVoltage(i As Double, T As Double, pCat As Double, pAn As Double) As VoltageBreakdown Implements IElectrochemicalModel.CellVoltage

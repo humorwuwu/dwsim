@@ -15,6 +15,8 @@
 
 - PEM exchange-current, activation and membrane-conductivity equations now follow
   the published Bzovsky 2024 expressions instead of the previous transcription errors.
+- Alkaline electrolyte conductivity now uses the R9/Gambou 2022 KOH correlation
+  with validity-range checks and numerical regression against its published curve.
 - Power targets above a stack's reachable maximum now fail explicitly instead of
   silently clamping to the maximum current density.
 - Stack `Current` now reports series-cell current rather than multiplying by cell count.

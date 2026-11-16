@@ -69,6 +69,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestElectrochemicalModel();
             TestElectrochemicalGoldenData();
             TestSpecificEnergyConsumptionGoldenData();
+            TestAlkalineConductivityGoldenData();
             TestThermalGoldenData();
             TestGasPurityRegression();
             TestInterlocks();
@@ -391,7 +392,18 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             var alkalineModel = new ModelAlkaline_SemiEmpirical();
             var conductivity = alkalineModel.ConductivityKOH(0.30, 353.15);
-            Check(Math.Abs(conductivity - 1.3) / 1.3 < 0.10, "KOH conductivity near 1.3 S/cm");
+            Check(Math.Abs(conductivity - 1.36093786) / 1.36093786 < 1e-5, "R9 KOH conductivity at 80 C");
+
+            var rejectedLowKOH = false;
+            try
+            {
+                alkalineModel.ConductivityKOH(0.10, 353.15);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                rejectedLowKOH = true;
+            }
+            Check(rejectedLowKOH, "KOH conductivity rejects out-of-range composition");
 
             var units = new DWSIM.SharedClasses.SystemsOfUnits.SI();
             Check(units.voltage == "V" && units.current == "A" && units.currentDensity == "A/cm2", "electrical unit properties");
@@ -537,6 +549,49 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
 
             Check(rows == 4, "thermal fixture has 4 points");
+        }
+
+        private static void TestAlkalineConductivityGoldenData()
+        {
+            var candidates = new[]
+            {
+                Path.Combine("electrolyzers", "alkaline_conductivity_r9.csv"),
+                Path.Combine("tests", "electrolyzers", "alkaline_conductivity_r9.csv")
+            };
+            var path = candidates.FirstOrDefault(File.Exists);
+            Check(path != null, "R9 KOH conductivity fixture found");
+            if (path == null) return;
+
+            var rows = 0;
+            foreach (var raw in File.ReadLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#") ||
+                    line.StartsWith("temperature_c,koh_mass_fraction,")) continue;
+
+                var parts = line.Split(',');
+                if (parts.Length != 4)
+                {
+                    Check(false, "invalid KOH conductivity fixture row: " + line);
+                    continue;
+                }
+
+                var temperatureC = double.Parse(parts[0], CultureInfo.InvariantCulture);
+                var massFraction = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                var expectedS_m = double.Parse(parts[2], CultureInfo.InvariantCulture);
+                var tolerance = double.Parse(parts[3], CultureInfo.InvariantCulture);
+
+                var model = new ModelAlkaline_SemiEmpirical();
+                var actualS_m = model.ConductivityKOH(massFraction, temperatureC + 273.15) * 100.0;
+                var relativeError = Math.Abs(actualS_m - expectedS_m) / expectedS_m;
+                rows++;
+                Check(relativeError <= tolerance,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "R9 KOH conductivity {0:F0} C, {1:F2} wt: expected {2:F3} S/m, got {3:F3} ({4:P2})",
+                        temperatureC, massFraction, expectedS_m, actualS_m, relativeError));
+            }
+
+            Check(rows == 6, "R9 KOH conductivity fixture has 6 points");
         }
 
         private static void TestGasPurityRegression()
