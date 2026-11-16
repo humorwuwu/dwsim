@@ -27,6 +27,7 @@ NODE_PATHS = {
     "level_sp": "PLC.H2sim.Level_SP",
     "level_pv": "PLC.H2sim.Level_PV",
     "level_command": "PLC.H2sim.Level_Command",
+    "cycle_count": "PLC.H2sim.Cycle_Count",
 }
 
 
@@ -156,6 +157,8 @@ def compare_with_modbus(opcua_metrics, modbus_samples):
 async def run(args):
     client, nodes = await connect_nodes(args.url, args.startup_timeout)
     try:
+        await nodes["cycle_count"].write_value(0)
+        await asyncio.sleep(0.2)
         temperature = 80.0
         pressure = 20.0
         level = 50.0

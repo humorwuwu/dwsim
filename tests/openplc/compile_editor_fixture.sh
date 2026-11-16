@@ -74,7 +74,8 @@ else
       "PLC.H2sim.Backpressure_Output",
       "PLC.H2sim.Level_SP",
       "PLC.H2sim.Level_PV",
-      "PLC.H2sim.Level_Command"
+      "PLC.H2sim.Level_Command",
+      "PLC.H2sim.Cycle_Count"
     ] and
     (.[0].config.address_space.variables[] |
       select(.node_id == "PLC.H2sim.Temperature_PV") |

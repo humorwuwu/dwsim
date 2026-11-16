@@ -188,6 +188,22 @@
                   "engineer": "r"
                 },
                 "nodeType": "variable"
+              },
+              {
+                "id": "cycle-count",
+                "pouName": "main",
+                "variablePath": "Cycle_Count",
+                "variableType": "DINT",
+                "nodeId": "PLC.H2sim.Cycle_Count",
+                "browseName": "Cycle_Count",
+                "displayName": "Test cycle counter",
+                "description": "Writable test epoch used by the H2sim parity bench",
+                "permissions": {
+                  "viewer": "r",
+                  "operator": "r",
+                  "engineer": "rw"
+                },
+                "nodeType": "variable"
               }
             ]
           }
