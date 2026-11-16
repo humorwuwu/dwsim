@@ -12,7 +12,7 @@
 - 电解槽的 `Calculate` 已有 PEM/ALK 模板和 CI 加载/计算冒烟；模板含 H2 纯化/储罐，但 G/L 分离和两级压缩尚未接入。PEM 额定点按论文 925 kW 上限取 900 kW，ALK 厂级模板使用 17600 cm2 单电池面积；完整质量/能量守恒回归仍待补齐。
 - V-5.1.2 ~ V-5.1.10 需要完整 OpenPLC v4 程序与真实主站；已增加 OpenPLC v4 官方 `modbus_master` 的 FC4/FC16 探针（V-5.1.1b）和官方 OPC UA server manager 的读写探针（V-3.5b），但仍未完成 PLC 内三回路 PID。
 - OPC UA 包从计划里的 1.5.374.54 改为 **1.4.371.96**：前者只有 net48/netstandard2.1，net462 无法引用；1.4.371.96 有 net462 资产。None/Anonymous 已通过 mock server 和 OpenPLC v4 官方 server manager 探针；`Basic256Sha256` + Username、断线重连和权限不足场景未测。
-- `Microsoft.Bcl.HashCode` 在 MSBuild 里报 MSB3245（引用未解析），运行时靠 CI 手工复制该 DLL。做发行包时必须把它补进 `DistPackages`。
+- `Microsoft.Bcl.HashCode` 在 Mono/MSBuild 里可能报 MSB3245（引用未解析）；Windows CI 现在会在打包前显式复制该 DLL 到 `DistPackages`，发行包和 OpenPLC OPC UA 探针共用该暂存目录。
 - 本地 Mono 构建：`Directory.Build.targets` 为非 Windows 构建提供 netstandard facade 引用和 HintPath 反斜杠归一化；`DWSIM.Controls.PythonConsoleControl` 是 WPF 工程，Mono 无法编译，所以全量本地构建只能做到 Io/Modbus 测试，Dynamics/Automation 仍依赖 CI 产物。
 - T-3.1 的两个 UI 窗体已接线并通过编译；暂停/续跑、单步前进/后退和 6 个动态样例的 UI 行为还没有 Windows 桌面实测，回归基准也未采集。
 - `Dynamic Simulation - PFR.dwxmz` 保存的 1 s 动态步长大于该样例的 PFR 动态停留时间，直接运行会报 `PFR-001`；headless 冒烟跳过该样例。需要用户手工降低步长或修样例。

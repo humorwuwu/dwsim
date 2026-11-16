@@ -26,6 +26,12 @@ jobs:
         shell: pwsh
         run: ./scripts/build.ps1 -Configuration ${{ matrix.Configuration }} -Platform x64
 
+      - name: Stage runtime dependencies
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          Copy-Item packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll DistPackages\Windows\ -Force
+
       - name: Smoke test DWSIM startup
         if: matrix.Configuration == 'Release'
         shell: pwsh
