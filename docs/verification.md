@@ -68,7 +68,8 @@
 - 产物：`PlatformFiles/Common/samples/PEM Electrolysis Plant.dwxmz`、`Alkaline Electrolysis Plant.dwxmz`；每套含电解槽、冷却水、H2 纯化、储罐和 H2/O2/off-gas 出口。
 - 额定栈：PEM 使用 900 kW 运行点，PEM 模型在 2.5 A/cm2 的最大可达功率为
   920.47 kW；ALK 使用 17600 cm2 单电池面积、300 片，0.4 A/cm2 时模型功率为
-  3000.17 kW。两个已提交模板的参数值已同步，回读计算由 CI 验证。
+  3000.17 kW。模板额定点取 2950 kW，为不同物性包的数值差异保留余量；
+  两个已提交模板的参数值已同步，回读计算由 CI 验证。
 - 回归：`DWSIM.Automation.Dynamics.Tests` 的 `TestPlantSamples` 重新加载并计算两个已提交模板，断言无求解错误、功率与模板额定值相差 <3%，并检查串联电池电流定义。
 - 储罐动态：60 s 动态测试要求储罐压力上升，CI run `43724380091` 通过。
 - 加载链路修复：自动化加载前注册外部 UO；外部 UO 图形按保存的连接器数量重建真实连接点；连接恢复使用保存的输出索引。

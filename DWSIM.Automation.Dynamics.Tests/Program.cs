@@ -86,7 +86,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             {
                 Directory.CreateDirectory(outputDirectory);
                 GeneratePlant(outputDirectory, "PEM Electrolysis Plant.dwxmz", new PEMElectrolyzer(), 900.0, 30.0, 2.0);
-                GeneratePlant(outputDirectory, "Alkaline Electrolysis Plant.dwxmz", new AlkalineElectrolyzer(), 3000.0, 16.0, 16.0);
+                GeneratePlant(outputDirectory, "Alkaline Electrolysis Plant.dwxmz", new AlkalineElectrolyzer(), 2950.0, 16.0, 16.0);
                 return 0;
             }
             catch (Exception ex)
@@ -222,7 +222,7 @@ namespace DWSIM.Automation.Dynamics.Tests
                     {
                         Console.WriteLine("plant {0}: power={1} kW, H2 purity={2}%",
                             Path.GetFileName(file), unit.Power, unit.H2Purity);
-                        var targetPower = unit is AlkalineElectrolyzer ? 3000.0 : 900.0;
+                        var targetPower = unit is AlkalineElectrolyzer ? 2950.0 : 900.0;
                         Check(Math.Abs(unit.Power - targetPower) / targetPower < 0.03,
                             "plant electrolyzer power follows template rating: " + Path.GetFileName(file) +
                             " " + unit.Power + " kW vs " + targetPower + " kW");

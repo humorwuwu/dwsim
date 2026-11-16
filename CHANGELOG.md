@@ -20,8 +20,9 @@
 - Stack `Current` now reports series-cell current rather than multiplying by cell count.
 - OPC UA client certificates are stored under the user's local application data
   directory instead of an unwritable system-wide path.
-- Plant templates now use a 900 kW PEM operating point and a 17600 cm2 alkaline
-  cell area so their requested ratings are reachable.
+- Plant templates now use a 900 kW PEM operating point and a 2950 kW alkaline
+  operating point with a 17600 cm2 cell area so their requested ratings remain
+  reachable across property packages.
 
 ## [0.2.0] - 2026-11-15
 
