@@ -59,6 +59,12 @@
     <Reference Include="NModbus, Version=3.0.81.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NModbus.3.0.81\lib\net46\NModbus.dll</HintPath>
     </Reference>
+    <Reference Include="Opc.Ua.Client, Version=1.4.371.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\OPCFoundation.NetStandard.Opc.Ua.Client.1.4.371.96\lib\net462\Opc.Ua.Client.dll</HintPath>
+    </Reference>
+    <Reference Include="Opc.Ua.Core, Version=1.4.371.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\OPCFoundation.NetStandard.Opc.Ua.Core.1.4.371.96\lib\net462\Opc.Ua.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml" />
@@ -81,6 +87,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="..\tests\openplc\modbus_master_probe.py">
+      <Link>openplc\modbus_master_probe.py</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\tests\openplc\opcua_server_probe.py">
+      <Link>openplc\opcua_server_probe.py</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

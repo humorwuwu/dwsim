@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using Opc.Ua;
 using DWSIM.H2sim.Io;
 using NModbus;
 
@@ -13,8 +16,13 @@ namespace DWSIM.H2sim.Io.Tests
     {
         private static int _failures;
 
-        private static int Main()
+        private static int Main(string[] args)
         {
+            if (args.Length >= 2 && args[0] == "--openplc-modbus-probe")
+                return TestOpenPlcModbusMasterProbe(args[1], args.Length >= 3 ? args[2] : null);
+            if (args.Length >= 2 && args[0] == "--openplc-opcua-probe")
+                return TestOpenPlcOpcUaServerProbe(args[1], args.Length >= 3 ? args[2] : null);
+
             TestRoundTrip();
             TestDuplicateId();
             TestFromPlcConflict();
@@ -25,6 +33,239 @@ namespace DWSIM.H2sim.Io.Tests
 
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
+        }
+
+        private static int TestOpenPlcModbusMasterProbe(string openPlcRoot, string pythonExecutable)
+        {
+            var scriptCandidates = new[]
+            {
+                Path.Combine("openplc", "modbus_master_probe.py"),
+                Path.Combine("tests", "openplc", "modbus_master_probe.py")
+            };
+            var script = Array.Find(scriptCandidates, File.Exists);
+            if (script == null)
+            {
+                Console.Error.WriteLine("FAIL: OpenPLC Modbus probe script not found.");
+                return 1;
+            }
+
+            var snapshot = new ModbusDataSnapshot();
+            snapshot.WriteInputRegisters(0, new[] { (ushort)853 });
+
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+            var factory = new ModbusFactory();
+            var network = factory.CreateSlaveNetwork(listener);
+            network.AddSlave(factory.CreateSlave((byte)1, new ModbusSlaveDataStore(snapshot)));
+            var cancellation = new CancellationTokenSource();
+            var listenTask = network.ListenAsync(cancellation.Token);
+
+            try
+            {
+                Thread.Sleep(150);
+                var executable = pythonExecutable;
+                if (string.IsNullOrWhiteSpace(executable))
+                    executable = Environment.GetEnvironmentVariable("PYTHON_EXE") ??
+                                 (Environment.OSVersion.Platform == PlatformID.Win32NT ? "python" : "python3");
+
+                var arguments = Quote(script) + " --openplc-dir " + Quote(openPlcRoot) +
+                                " --port " + port.ToString(CultureInfo.InvariantCulture);
+                Console.WriteLine("OpenPLC v4 Modbus master probe: {0} {1}", executable, arguments);
+
+                using (var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = executable,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    WorkingDirectory = Directory.GetCurrentDirectory()
+                }))
+                {
+                    if (process == null)
+                    {
+                        Console.Error.WriteLine("FAIL: could not start OpenPLC probe.");
+                        return 1;
+                    }
+
+                    if (!process.WaitForExit(20000))
+                    {
+                        try { process.Kill(); } catch { }
+                        Console.Error.WriteLine("FAIL: OpenPLC probe timed out.");
+                        return 1;
+                    }
+
+                    if (process.ExitCode != 0)
+                    {
+                        Console.Error.WriteLine("FAIL: OpenPLC probe exited with " + process.ExitCode);
+                        return 1;
+                    }
+                }
+
+                var written = snapshot.ReadHoldingRegisters(0, 1);
+                if (written.Length != 1 || written[0] != 1800)
+                {
+                    Console.Error.WriteLine("FAIL: OpenPLC master did not write holding register 0.");
+                    return 1;
+                }
+
+                Console.WriteLine("PASS: OpenPLC v4 modbus_master read FC4 and wrote FC16.");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("FAIL: OpenPLC probe exception: " + ex);
+                return 1;
+            }
+            finally
+            {
+                cancellation.Cancel();
+                try { listener.Stop(); } catch { }
+                try { (network as IDisposable)?.Dispose(); } catch { }
+                try { listenTask.Wait(2000); } catch { }
+                cancellation.Dispose();
+            }
+        }
+
+        private static int TestOpenPlcOpcUaServerProbe(string openPlcRoot, string pythonExecutable)
+        {
+            var scriptCandidates = new[]
+            {
+                Path.Combine("openplc", "opcua_server_probe.py"),
+                Path.Combine("tests", "openplc", "opcua_server_probe.py")
+            };
+            var script = Array.Find(scriptCandidates, File.Exists);
+            if (script == null)
+            {
+                Console.Error.WriteLine("FAIL: OpenPLC OPC UA probe script not found.");
+                return 1;
+            }
+
+            var portProbe = new TcpListener(IPAddress.Loopback, 0);
+            portProbe.Start();
+            var port = ((IPEndPoint)portProbe.LocalEndpoint).Port;
+            portProbe.Stop();
+
+            var executable = pythonExecutable;
+            if (string.IsNullOrWhiteSpace(executable))
+                executable = Environment.GetEnvironmentVariable("PYTHON_EXE") ??
+                             (Environment.OSVersion.Platform == PlatformID.Win32NT ? "python" : "python3");
+
+            var arguments = Quote(script) + " --openplc-dir " + Quote(openPlcRoot) +
+                            " --port " + port.ToString(CultureInfo.InvariantCulture);
+            Console.WriteLine("OpenPLC v4 OPC UA server probe: {0} {1}", executable, arguments);
+
+            Process process = null;
+            try
+            {
+                process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = executable,
+                    Arguments = arguments,
+                    UseShellExecute = false,
+                    WorkingDirectory = Directory.GetCurrentDirectory()
+                });
+                if (process == null)
+                {
+                    Console.Error.WriteLine("FAIL: could not start OpenPLC OPC UA probe.");
+                    return 1;
+                }
+
+                var connection = new ConnectionConfig
+                {
+                    Name = "OpenPLC-v4",
+                    Protocol = BridgeProtocol.OpcUaClient,
+                    EndpointUrl = "opc.tcp://127.0.0.1:" +
+                                  port.ToString(CultureInfo.InvariantCulture) + "/openplc/opcua",
+                    SecurityPolicy = "None",
+                    Anonymous = true
+                };
+                const string namespaceUri = "urn:openplc:opcua:namespace";
+
+                var factory = new OpcUaSessionFactory();
+                var initial = double.NaN;
+                var deadline = DateTime.UtcNow.AddSeconds(15);
+                Exception lastError = null;
+                while (DateTime.UtcNow < deadline && !process.HasExited)
+                {
+                    try
+                    {
+                        initial = factory.ReadDouble(connection, "PLC.H2.P_set", namespaceUri);
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        lastError = ex;
+                        Thread.Sleep(250);
+                    }
+                }
+
+                if (process.HasExited)
+                {
+                    Console.Error.WriteLine("FAIL: OpenPLC OPC UA server exited with " + process.ExitCode);
+                    return 1;
+                }
+                if (double.IsNaN(initial) || Math.Abs(initial - 5.0) > 1e-6)
+                {
+                    Console.Error.WriteLine("FAIL: initial OPC UA value was " + initial + ". " + lastError);
+                    return 1;
+                }
+
+                var session = factory.CreateSession(connection, null);
+                try
+                {
+                    var nodeId = OpcUaNodeResolver.Resolve("PLC.H2.P_set", namespaceUri, session.NamespaceUris);
+                    var writes = new[]
+                    {
+                        new WriteValue
+                        {
+                            NodeId = nodeId,
+                            AttributeId = Attributes.Value,
+                            Value = new DataValue(new Variant(6.5f))
+                        }
+                    };
+                    StatusCodeCollection results;
+                    DiagnosticInfoCollection diagnostics;
+                    session.Write(null, writes, out results, out diagnostics);
+                    if (results.Count != 1 || StatusCode.IsBad(results[0]))
+                        throw new InvalidOperationException("OPC UA write returned " +
+                            (results.Count > 0 ? results[0].ToString() : "no status"));
+                }
+                finally
+                {
+                    try { session.Close(); } catch { }
+                }
+
+                Thread.Sleep(300);
+                var written = factory.ReadDouble(connection, "PLC.H2.P_set", namespaceUri);
+                if (Math.Abs(written - 6.5) > 1e-6)
+                {
+                    Console.Error.WriteLine("FAIL: OPC UA write was not reflected, got " + written);
+                    return 1;
+                }
+
+                Console.WriteLine("PASS: OpenPLC v4 OPC UA server read/write through H2sim client.");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("FAIL: OpenPLC OPC UA probe exception: " + ex);
+                return 1;
+            }
+            finally
+            {
+                if (process != null && !process.HasExited)
+                {
+                    try { process.Kill(); } catch { }
+                    try { process.WaitForExit(3000); } catch { }
+                }
+                process?.Dispose();
+            }
+        }
+
+        private static string Quote(string value)
+        {
+            return "\"" + value.Replace("\"", "\\\"") + "\"";
         }
 
         private static void TestRoundTrip()

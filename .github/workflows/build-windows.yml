@@ -74,6 +74,26 @@ jobs:
             Pop-Location
           }
 
+      - name: OpenPLC v4 Modbus master probe
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          git init .openplc-runtime
+          git -C .openplc-runtime remote add origin https://github.com/autonomy-logic/openplc-runtime.git
+          git -C .openplc-runtime fetch --depth 1 origin 9fb5e1a
+          git -C .openplc-runtime checkout --detach FETCH_HEAD
+          python -m pip install -r .openplc-runtime/core/src/drivers/plugins/python/modbus_master/requirements.txt
+          python -m pip install -r .openplc-runtime/core/src/drivers/plugins/python/opcua/requirements.txt
+          Push-Location DistPackages\Windows
+          try {
+            .\DWSIM.H2sim.Io.Tests.exe --openplc-modbus-probe (Resolve-Path ..\..\.openplc-runtime)
+            if ($LASTEXITCODE -ne 0) { throw "OpenPLC v4 Modbus master probe failed ($LASTEXITCODE)" }
+            .\DWSIM.H2sim.Io.Tests.exe --openplc-opcua-probe (Resolve-Path ..\..\.openplc-runtime)
+            if ($LASTEXITCODE -ne 0) { throw "OpenPLC v4 OPC UA server probe failed ($LASTEXITCODE)" }
+          } finally {
+            Pop-Location
+          }
+
       - name: Dynamics headless smoke test
         if: matrix.Configuration == 'Release'
         shell: pwsh

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
@@ -20,10 +21,20 @@ namespace DWSIM.H2sim.Io
                 ApplicationType = ApplicationType.Client
             };
 
+            var pkiRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "H2sim",
+                "pki");
+            Directory.CreateDirectory(pkiRoot);
+
             Configuration = application
                 .Build("urn:h2sim:client", "urn:h2sim:client")
                 .AsClient()
-                .AddSecurityConfiguration("CN=H2sim", null, null, null)
+                .AddSecurityConfiguration(
+                    "CN=H2sim",
+                    pkiRoot,
+                    Path.Combine(pkiRoot, "rejected"),
+                    Path.Combine(pkiRoot, "issuer"))
                 .SetAutoAcceptUntrustedCertificates(true)
                 .SetAddAppCertToTrustedStore(true)
                 .Create()
