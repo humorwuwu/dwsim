@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using Opc.Ua;
 using Opc.Ua.Client;
 using Opc.Ua.Configuration;
@@ -9,6 +11,9 @@ namespace DWSIM.H2sim.Io
     /// <summary>Creates OPC UA client sessions and accepts the server certificate.</summary>
     public sealed class OpcUaSessionFactory
     {
+        private static readonly object CertificateLock = new object();
+        private static X509Certificate2 _applicationCertificate;
+
         /// <summary>Application configuration used for the session.</summary>
         public ApplicationConfiguration Configuration { get; private set; }
 
@@ -53,7 +58,7 @@ namespace DWSIM.H2sim.Io
                     .GetAwaiter().GetResult();
             }
             Configuration.CertificateValidator.CertificateValidation += (sender, e) => e.Accept = true;
-            application.CheckApplicationInstanceCertificate(true, 2048).GetAwaiter().GetResult();
+            EnsureApplicationCertificate(Configuration);
 
             var useSecurity = !string.Equals(connection.SecurityPolicy, "None", StringComparison.OrdinalIgnoreCase);
             var description = CoreClientUtils.SelectEndpoint(Configuration, connection.EndpointUrl, useSecurity);
@@ -69,6 +74,34 @@ namespace DWSIM.H2sim.Io
             session.KeepAlive += (sender, e) => keepAlive?.Invoke(session, e);
 
             return session;
+        }
+
+        private static void EnsureApplicationCertificate(ApplicationConfiguration configuration)
+        {
+            lock (CertificateLock)
+            {
+                if (_applicationCertificate == null)
+                {
+                    var domainNames = new List<string>
+                    {
+                        Utils.GetHostName(),
+                        "localhost"
+                    };
+                    _applicationCertificate = CertificateFactory.CreateCertificate(
+                            "urn:h2sim:client",
+                            "H2sim",
+                            "CN=H2sim, DC=localhost",
+                            domainNames)
+                        .SetLifeTime(60)
+                        .SetRSAKeySize(2048)
+                        .CreateForRSA();
+                }
+
+                configuration.SecurityConfiguration.ApplicationCertificate.Certificate = _applicationCertificate;
+                configuration.CertificateValidator
+                    .Update(configuration.SecurityConfiguration)
+                    .GetAwaiter().GetResult();
+            }
         }
 
         /// <summary>Reads one numeric node with a temporary session (used by tests and diagnostics).</summary>
