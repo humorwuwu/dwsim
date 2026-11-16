@@ -84,7 +84,7 @@ def validate(samples):
 
 
 async def run(args):
-    ir_block = ModbusSequentialDataBlock(1, [800, 2000, 500])
+    ir_block = ModbusSequentialDataBlock(1, [8000, 2000, 500])
     hr_block = ModbusSequentialDataBlock(1, [0, 0, 0])
     store = ModbusSlaveContext(ir=ir_block, hr=hr_block)
     context = ModbusServerContext(slaves=store, single=True)
@@ -109,9 +109,9 @@ async def run(args):
                 break
 
             commands = hr_block.getValues(1, 3)
-            cooling_pct = max(0, min(100, commands[0] / 10.0))
-            vent_pct = max(0, min(100, commands[1] / 10.0))
-            drain_pct = max(0, min(100, commands[2] / 10.0))
+            cooling_pct = max(0, min(100, commands[0] / 100.0))
+            vent_pct = max(0, min(100, commands[1] / 100.0))
+            drain_pct = max(0, min(100, commands[2] / 100.0))
 
             temperature += (
                 0.2
@@ -127,7 +127,7 @@ async def run(args):
             ir_block.setValues(
                 1,
                 [
-                    int(round(temperature * 10.0)),
+                    int(round(temperature * 100.0)),
                     int(round(pressure * 100.0)),
                     int(round(level * 10.0)),
                 ],

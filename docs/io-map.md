@@ -40,13 +40,16 @@ Modbus 没有质量码，采用以下约定：
 | `WE1.T_set` | Holding Register | 1 | Int16 | 10 | degC | FromPlc |
 | `WE1.P_cat_set` | Holding Register | 2 | Int16 | 100 | bar | FromPlc |
 | `WE1.Start` | Coil | 0 | Bool | — | — | FromPlc |
-| `WE1.T_stack` | Input Register | 0 | Int16 | 10 | degC | ToPlc |
+| `WE1.T_stack` | Input Register | 0 | Int16 | 100 | degC | ToPlc |
 | `WE1.P_stack` | Input Register | 1 | Int16 | 10 | kW | ToPlc |
 | `WE1.H2inO2` | Input Register | 2 | Int16 | 100 | vol% | ToPlc |
 | `WE1.Running` | Discrete Input | 0 | Bool | — | — | ToPlc |
 | `ALM.ModelFault` | Coil | 0 | Bool | — | — | ToPlc（保留） |
 
 > 实际项目按设备点表扩展；不要复用已占用的地址（校验器会报 `address overlap`）。
+>
+> 温度采用 `Scale=100`（0.01 °C 分辨率），避免 0.1 °C 量化死区给闭环带来
+> 约 0.4 K 稳态误差；OpenPLC 三回路模板的模拟执行器也采用 0.01% 分辨率。
 
 ## 连接配置
 

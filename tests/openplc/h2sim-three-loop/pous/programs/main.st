@@ -51,7 +51,7 @@ PROGRAM main
     Temperature_PV := 0.0;
     Temperature_Integral := 0.0;
   ELSE
-    Temperature_PV := INT_TO_REAL(Temperature_Raw) / 10.0;
+    Temperature_PV := INT_TO_REAL(Temperature_Raw) / 100.0;
   END_IF;
 
   IF Pressure_Raw = -32768 THEN
@@ -101,9 +101,9 @@ PROGRAM main
   END_IF;
   Level_Integral := Level_Command - 50.0 - 50.0 * Level_Error;
 
-  Cooling_Raw := REAL_TO_INT(Cooling_Output * 10.0);
-  Backpressure_Raw := REAL_TO_INT(Backpressure_Output * 10.0);
-  Level_Command_Raw := REAL_TO_INT(Level_Command * 10.0);
+  Cooling_Raw := REAL_TO_INT(Cooling_Output * 100.0);
+  Backpressure_Raw := REAL_TO_INT(Backpressure_Output * 100.0);
+  Level_Command_Raw := REAL_TO_INT(Level_Command * 100.0);
 END_PROGRAM
 
 CONFIGURATION Config0
