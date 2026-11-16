@@ -25,6 +25,7 @@ if [[ "$actual_sha256" != "$appimage_sha256" ]]; then
 fi
 chmod +x "$appimage"
 
+stdout="$work_dir/compile-stdout.txt"
 result="$work_dir/compile-result.json"
 log="$work_dir/compile.log"
 env -u ELECTRON_RUN_AS_NODE "$appimage" \
@@ -34,9 +35,14 @@ env -u ELECTRON_RUN_AS_NODE "$appimage" \
   --user-data "$work_dir/user-data" \
   compile "$project" \
   --target 'OpenPLC Runtime v4' \
-  --json >"$result" 2>"$log"
+  --json >"$stdout" 2>"$log"
 
-jq -e '.ok == true and .target == "OpenPLC Runtime v4" and .uploaded == false' "$result" >/dev/null
+awk 'found || /^{/ { found = 1; print }' "$stdout" >"$result"
+if ! jq -e '.ok == true and .target == "OpenPLC Runtime v4" and .uploaded == false' "$result" >/dev/null; then
+  cat "$stdout"
+  cat "$log" >&2
+  exit 1
+fi
 
 build_dir="$project/build/OpenPLC Runtime v4/src"
 test -f "$build_dir/program.st"
