@@ -31,6 +31,8 @@ jobs:
         shell: pwsh
         run: |
           Copy-Item packages\Microsoft.Bcl.HashCode.1.1.1\lib\net461\Microsoft.Bcl.HashCode.dll DistPackages\Windows\ -Force
+          Copy-Item packages\System.Buffers.4.6.0\lib\net462\System.Buffers.dll DistPackages\Windows\ -Force
+          Copy-Item packages\System.Memory.4.6.0\lib\net462\System.Memory.dll DistPackages\Windows\ -Force
 
       - name: Smoke test DWSIM startup
         if: matrix.Configuration == 'Release'

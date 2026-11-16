@@ -86,6 +86,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
     <None Include="..\tests\openplc\modbus_master_probe.py">
       <Link>openplc\modbus_master_probe.py</Link>
