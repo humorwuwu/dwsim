@@ -124,6 +124,7 @@ TCPServer/bin/Debug/*
 /packages/
 /release/
 /build/
+/tests/openplc/*/build/
 /target/
 /.build/
 /.tools/

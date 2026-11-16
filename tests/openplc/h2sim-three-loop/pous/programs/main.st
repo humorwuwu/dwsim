@@ -92,14 +92,14 @@ PROGRAM main
   Pressure_Integral := Backpressure_Output - 50.0 - 30.0 * Pressure_Error;
 
   Level_Error := Level_PV - Level_SP;
-  Level_Integral := Level_Integral + 1.0 * Level_Error * 0.1;
-  Level_Command := 20.0 * Level_Error + Level_Integral + 50.0;
+  Level_Integral := Level_Integral + 2.0 * Level_Error * 0.1;
+  Level_Command := 50.0 * Level_Error + Level_Integral + 50.0;
   IF Level_Command > 100.0 THEN
     Level_Command := 100.0;
   ELSIF Level_Command < 0.0 THEN
     Level_Command := 0.0;
   END_IF;
-  Level_Integral := Level_Command - 50.0 - 20.0 * Level_Error;
+  Level_Integral := Level_Command - 50.0 - 50.0 * Level_Error;
 
   Cooling_Raw := REAL_TO_INT(Cooling_Output * 10.0);
   Backpressure_Raw := REAL_TO_INT(Backpressure_Output * 10.0);
