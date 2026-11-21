@@ -1014,6 +1014,9 @@ namespace DWSIM.Automation.Dynamics.Tests
                         // The sample's saved initial state is an empty tank, which pins the drain
                         // valve at its lower limit and makes the Shadow comparison degenerate.
                         ReuseInitialState = true,
+                        // The bench primes the controller's integral itself; ResetControllers
+                        // would zero it again before the first step.
+                        ResetControllers = false,
                         InitialStateId = schedule.InitialFlowsheetStateID
                     }, host = new ShadowBenchHost(bridge, plc, master, pid, flowsheet, pvTag, pvProperty, scale, span, samples, stepSeconds));
 
@@ -1126,10 +1129,10 @@ namespace DWSIM.Automation.Dynamics.Tests
                         : 0.0;
                     _lastError = error;
                 }
-                else
-                {
-                    _integral = Clamp(_integral + error * dt);
-                }
+
+                // The internal PID accumulates the error before it computes the output, so the
+                // mirror does the same on its first step too.
+                _integral = Clamp(_integral + error * dt);
 
                 var dTerm = (error - _lastError) / dt;
                 _lastError = error;
