@@ -980,6 +980,19 @@ namespace DWSIM.Automation.Dynamics.Tests
             });
             map.Signals.Add(new Signal
             {
+                Id = "SP",
+                Direction = SignalDirection.ToPlc,
+                ObjectTag = pid.Name,
+                Property = "SetPointAbs",
+                Unit = "m",
+                Type = SignalDataType.Int16,
+                Scale = 1000.0,
+                ModbusArea = ModbusArea.InputRegister,
+                ModbusAddress = 1,
+                ConnectionName = "Shadow"
+            });
+            map.Signals.Add(new Signal
+            {
                 Id = "PV",
                 Direction = SignalDirection.ToPlc,
                 ObjectTag = pvTag,
@@ -1197,13 +1210,12 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             public void OnPreStep(int stepIndex, double simTime)
             {
-                if (stepIndex == 6) _pid.AdjustValue -= 0.05;   // mid-run setpoint step both controllers see
-
-                var pv = _pvPublished
-                    ? _master.ReadInputRegisters(1, 0, 1)[0] / 1000.0
+                var registers = _pvPublished ? _master.ReadInputRegisters(1, 0, 2) : null;
+                var pv = registers != null
+                    ? registers[0] / 1000.0
                     : Convert.ToDouble(_flowsheet.SimulationObjects[_pvTag].GetPropertyValue(_pvProperty));
+                var sp = registers != null ? registers[1] / 1000.0 : _pid.AdjustValue;
 
-                var sp = _pid.AdjustValue;
                 var currentMv = Convert.ToDouble(_flowsheet.SimulationObjects[_pid.ManipulatedObjectData.ID]
                     .GetPropertyValue(_pid.ManipulatedObjectData.PropertyName));
 
@@ -1220,6 +1232,10 @@ namespace DWSIM.Automation.Dynamics.Tests
             {
                 _bridge.PublishOutputs();
                 _pvPublished = true;
+
+                // Stepped after the publish, so the PLC sees the new setpoint one cycle later —
+                // the same zero-order hold the process value goes through.
+                if (stepIndex == 6) _pid.AdjustValue -= 0.05;
 
                 // The PLC command written this step was computed from the value published at the
                 // end of the previous step, so comparing it with the previous internal output is
