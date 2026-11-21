@@ -1011,7 +1011,9 @@ namespace DWSIM.Automation.Dynamics.Tests
                     {
                         DurationSeconds = 60,
                         StepSeconds = stepSeconds,
-                        ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                        // The sample's saved initial state is an empty tank, which pins the drain
+                        // valve at its lower limit and makes the Shadow comparison degenerate.
+                        ReuseInitialState = true,
                         InitialStateId = schedule.InitialFlowsheetStateID
                     }, host = new ShadowBenchHost(bridge, plc, master, pid, flowsheet, pvTag, pvProperty, scale, span, samples, stepSeconds));
 
@@ -1032,6 +1034,13 @@ namespace DWSIM.Automation.Dynamics.Tests
                     Console.WriteLine("shadow deviation: first={0:F2}%, worst after transfer={1:F2}% of span",
                         samples.Count > 0 ? Math.Abs(samples[0].DeviationPctOfSpan) : double.NaN, worst);
                     Check(worst < 5.0, string.Format(CultureInfo.InvariantCulture, "shadow: worst deviation {0:F2}% of span", worst));
+
+                    // Guard against a degenerate pass: the loop has to have moved the valve.
+                    var outputRange = samples.Count == 0
+                        ? 0.0
+                        : samples.Max(s => s.InternalOutput) - samples.Min(s => s.InternalOutput);
+                    Check(outputRange > 1.0, string.Format(CultureInfo.InvariantCulture,
+                        "shadow: bench exercised the loop (internal output range {0:F2}% of span)", outputRange));
 
                     var mvActual = Convert.ToDouble(flowsheet.SimulationObjects[mvTag].GetPropertyValue(mvProperty));
                     Check(Math.Abs(mvActual - host.LastWritten) <= 1.0 / scale,
