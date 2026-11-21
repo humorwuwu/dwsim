@@ -125,7 +125,7 @@ jobs:
             Copy-Item DWSIM.Automation.Dynamics.Tests\bin\x64\Release\* DistPackages\Windows\ -Recurse -Force
             Push-Location DistPackages\Windows
             try {
-              .\DWSIM.Automation.Dynamics.Tests.exe "samples\Dynamic Simulation - Water Tank Level Control.dwxmz"
+              .\DWSIM.Automation.Dynamics.Tests.exe "samples\Dynamic Simulation - Water Tank Level Control.dwxmz" --shadow-report shadow-report
               if ($LASTEXITCODE -ne 0) { throw "dynamics smoke test failed ($LASTEXITCODE)" }
             } finally {
               Pop-Location
@@ -154,6 +154,14 @@ jobs:
         with:
           name: h2sim-plant-samples
           path: DistPackages/Windows/generated-samples/*.dwxmz
+          if-no-files-found: error
+
+      - name: Upload shadow deviation evidence
+        if: matrix.Configuration == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2sim-shadow-deviation
+          path: DistPackages/Windows/shadow-report/*.csv
           if-no-files-found: error
 
   openplc-compiler:

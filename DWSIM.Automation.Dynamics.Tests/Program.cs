@@ -26,9 +26,11 @@ namespace DWSIM.Automation.Dynamics.Tests
             if (args.Length > 0 && args[0] == "--generate-samples")
                 return GeneratePlantSamples(args.Length > 1 ? args[1] : "generated-samples");
 
-            var path = args.Length > 0
+            var path = args.Length > 0 && !args[0].StartsWith("--")
                 ? args[0]
                 : Path.GetFullPath(Path.Combine("PlatformFiles", "Common", "samples", "Dynamic Simulation - Water Tank Level Control.dwxmz"));
+            var shadowReport = args.FirstOrDefault(a => a.StartsWith("--shadow-report=", StringComparison.Ordinal));
+            if (shadowReport != null) shadowReport = shadowReport.Substring("--shadow-report=".Length);
 
             Console.WriteLine("Loading " + path);
 
@@ -62,6 +64,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
 
             TestOwnership(flowsheet);
+            TestShadowDeviation(flowsheet, shadowReport);
             TestBridgeHost(flowsheet);
             TestModbusClosedLoop(flowsheet);
             TestOpcUaClosedLoop(flowsheet);
@@ -888,6 +891,293 @@ namespace DWSIM.Automation.Dynamics.Tests
             var after = controller.MVValue;
             Check(Math.Abs(after - before) <= 5.0 + 1e-6, "output rate limit bounds the move");
             flowsheet.DynamicMode = false;
+        }
+
+        /// <summary>
+        /// Shadow ownership: the PLC writes the manipulated variable over Modbus while the
+        /// internal PID computes its own output and records the deviation.
+        /// </summary>
+        private static void TestShadowDeviation(IFlowsheet flowsheet, string reportDirectory)
+        {
+            var pid = flowsheet.SimulationObjects.Values.OfType<PIDController>().FirstOrDefault();
+            Check(pid != null, "shadow: sample PID");
+            if (pid == null) return;
+
+            var mvTag = pid.ManipulatedObjectData.ID;
+            var mvProperty = pid.ManipulatedObjectData.PropertyName;
+            var pvTag = pid.ControlledObjectData.ID;
+            var pvProperty = pid.ControlledObjectData.PropertyName;
+            var span = pid.OutputMax - pid.OutputMin;
+
+            var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
+            var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
+            var stepSeconds = integrator.IntegrationStep.TotalSeconds;
+
+            var probe = new TcpListener(IPAddress.Loopback, 0);
+            probe.Start();
+            var port = ((IPEndPoint)probe.LocalEndpoint).Port;
+            probe.Stop();
+
+            var samples = new List<ShadowSample>();
+            var scale = Math.Min(100.0, 32767.0 / Math.Max(Math.Abs(pid.OutputMin), Math.Abs(pid.OutputMax)));
+            pid.Ownership = ControlOwnership.Shadow;
+
+            var map = new SignalMap();
+            map.Connections.Add(new ConnectionConfig
+            {
+                Name = "Shadow",
+                Protocol = BridgeProtocol.ModbusTcpServer,
+                Host = "127.0.0.1",
+                Port = port,
+                UnitId = 1,
+                Enabled = true
+            });
+            map.Signals.Add(new Signal
+            {
+                Id = "MV",
+                Direction = SignalDirection.FromPlc,
+                ObjectTag = mvTag,
+                Property = mvProperty,
+                Unit = "%",
+                Type = SignalDataType.Int16,
+                Scale = scale,
+                ModbusArea = ModbusArea.HoldingRegister,
+                ModbusAddress = 0,
+                ConnectionName = "Shadow"
+            });
+            map.Signals.Add(new Signal
+            {
+                Id = "PV",
+                Direction = SignalDirection.ToPlc,
+                ObjectTag = pvTag,
+                Property = pvProperty,
+                Unit = "m",
+                Type = SignalDataType.Int16,
+                Scale = 1000.0,
+                ModbusArea = ModbusArea.InputRegister,
+                ModbusAddress = 0,
+                ConnectionName = "Shadow"
+            });
+
+            var samples = new List<ShadowSample>();
+            pid.Ownership = ControlOwnership.Shadow;
+
+            using (var bridge = new ModbusTcpServerBridge())
+            {
+                Check(bridge.Connect(map, flowsheet), "shadow: bridge connects: " + bridge.Status.Message);
+                if (!bridge.Status.Connected) return;
+
+                ModbusMaster master = null;
+                TcpClient client = null;
+                try
+                {
+                    Thread.Sleep(200);
+                    client = new TcpClient("127.0.0.1", port);
+                    master = new ModbusFactory().CreateMaster(client);
+
+                    var plc = new ShadowPlc(pid);
+                    ShadowBenchHost host = null;
+                    var stats = DynamicsRunner.Run(flowsheet, new RunOptions
+                    {
+                        DurationSeconds = 60,
+                        StepSeconds = stepSeconds,
+                        ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                        InitialStateId = schedule.InitialFlowsheetStateID
+                    }, host = new ShadowBenchHost(bridge, plc, master, pid, flowsheet, pvTag, pvProperty, scale, span, samples, stepSeconds));
+
+                    Check(stats.Error == null, "shadow: run without errors: " + stats.Error);
+                    Check(stats.StepCount == 12, "shadow: twelve steps");
+                    Check(pid.Ownership == ControlOwnership.Shadow, "shadow: ownership stays Shadow");
+                    Check(samples.Count == stats.StepCount, "shadow: one deviation sample per step");
+                    Check(pid.ShadowDeviationHistory.Count >= stats.StepCount, "shadow: deviation recorded every step");
+
+                    var worst = samples.Count == 0
+                        ? double.PositiveInfinity
+                        : samples.Max(s => Math.Abs(s.DeviationPctOfSpan));
+                    Check(worst < 5.0, string.Format(CultureInfo.InvariantCulture, "shadow: worst deviation {0:F2}% of span", worst));
+
+                    var mvActual = Convert.ToDouble(flowsheet.SimulationObjects[mvTag].GetPropertyValue(mvProperty));
+                    Check(Math.Abs(mvActual - host.LastWritten) <= 1.0 / scale,
+                        string.Format(CultureInfo.InvariantCulture, "shadow: PLC write reached the manipulated object ({0:F3} vs {1:F3})", mvActual, host.LastWritten));
+
+                    if (reportDirectory != null) WriteShadowReport(reportDirectory, samples);
+                }
+                catch (Exception ex)
+                {
+                    Check(false, "shadow: exception " + ex);
+                }
+                finally
+                {
+                    client?.Close();
+                    bridge.Disconnect();
+                }
+            }
+        }
+
+        private static void WriteShadowReport(string directory, List<ShadowSample> samples)
+        {
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "v5.1.7-shadow-deviation.csv");
+            using (var writer = new StreamWriter(path))
+            {
+                writer.WriteLine("step,sim_time_s,pv_m,sp_m,internal_output_pct,external_output_pct,deviation_pct,deviation_pct_of_span");
+                foreach (var sample in samples)
+                {
+                    writer.WriteLine(string.Join(",", new[]
+                    {
+                        sample.Step.ToString(CultureInfo.InvariantCulture),
+                        sample.SimTime.ToString("F3", CultureInfo.InvariantCulture),
+                        sample.Pv.ToString("F4", CultureInfo.InvariantCulture),
+                        sample.Sp.ToString("F4", CultureInfo.InvariantCulture),
+                        sample.InternalOutput.ToString("F4", CultureInfo.InvariantCulture),
+                        sample.ExternalOutput.ToString("F4", CultureInfo.InvariantCulture),
+                        sample.Deviation.ToString("F4", CultureInfo.InvariantCulture),
+                        sample.DeviationPctOfSpan.ToString("F4", CultureInfo.InvariantCulture)
+                    }));
+                }
+            }
+            Console.WriteLine("shadow deviation report: " + path);
+        }
+
+        private sealed class ShadowSample
+        {
+            public int Step;
+            public double SimTime;
+            public double Pv;
+            public double Sp;
+            public double InternalOutput;
+            public double ExternalOutput;
+            public double Deviation;
+            public double DeviationPctOfSpan;
+        }
+
+        /// <summary>Independent PI controller standing in for the PLC, with a 3% gain mismatch.</summary>
+        private sealed class ShadowPlc
+        {
+            private const double GainMismatch = 1.03;
+            private readonly PIDController _pid;
+            private double _integral;
+            private double _lastError;
+            private bool _primed;
+
+            public ShadowPlc(PIDController pid)
+            {
+                _pid = pid;
+            }
+
+            public double Step(double pv, double sp, double dt, double currentMv)
+            {
+                var baseSP = _pid.BaseSP.HasValue && _pid.BaseSP.Value != 0.0 ? _pid.BaseSP.Value : Math.Abs(sp);
+                if (baseSP == 0.0) baseSP = 1.0;
+
+                var error = (_pid.ReverseActing ? pv - sp : sp - pv) / baseSP;
+
+                if (!_primed)
+                {
+                    _primed = true;
+                    var output0 = _pid.ReverseActing ? currentMv / baseSP - 1.0 : 1.0 - currentMv / baseSP;
+                    _integral = GainMismatch * _pid.Ki != 0.0
+                        ? (output0 - GainMismatch * _pid.Kp * error - _pid.Offset / baseSP) / (GainMismatch * _pid.Ki)
+                        : 0.0;
+                    _lastError = error;
+                }
+                else
+                {
+                    _integral += error * dt;
+                }
+
+                var dTerm = (error - _lastError) / dt;
+                _lastError = error;
+
+                var output = GainMismatch * (_pid.Kp * error + _pid.Ki * _integral + _pid.Kd * dTerm) + _pid.Offset / baseSP;
+                var mv = _pid.ReverseActing ? (1.0 + output) * baseSP : (1.0 - output) * baseSP;
+                mv = Math.Min(_pid.OutputMax, Math.Max(_pid.OutputMin, mv));
+                return mv;
+            }
+        }
+
+        private sealed class ShadowBenchHost : IDynamicsHost
+        {
+            private readonly IPlantBridge _bridge;
+            private readonly ShadowPlc _plc;
+            private readonly ModbusMaster _master;
+            private readonly PIDController _pid;
+            private readonly IFlowsheet _flowsheet;
+            private readonly string _pvTag;
+            private readonly string _pvProperty;
+            private readonly double _scale;
+            private readonly double _span;
+            private readonly List<ShadowSample> _samples;
+            private readonly double _stepSeconds;
+            private bool _pvPublished;
+
+            public ShadowBenchHost(IPlantBridge bridge, ShadowPlc plc, ModbusMaster master, PIDController pid,
+                                   IFlowsheet flowsheet, string pvTag, string pvProperty, double scale, double span,
+                                   List<ShadowSample> samples, double stepSeconds)
+            {
+                _bridge = bridge;
+                _plc = plc;
+                _master = master;
+                _pid = pid;
+                _flowsheet = flowsheet;
+                _pvTag = pvTag;
+                _pvProperty = pvProperty;
+                _scale = scale;
+                _span = span;
+                _samples = samples;
+                _stepSeconds = stepSeconds;
+            }
+
+            /// <summary>The manipulated value the model actually received from the last register write.</summary>
+            public double LastWritten { get; private set; }
+
+            public bool ShouldAbort => false;
+            public bool IsPaused => false;
+
+            public void OnRunStarting(IFlowsheet flowsheet, RunOptions options) { }
+
+            public void OnPreStep(int stepIndex, double simTime)
+            {
+                var pv = _pvPublished
+                    ? _master.ReadInputRegisters(1, 0, 1)[0] / 1000.0
+                    : Convert.ToDouble(_flowsheet.SimulationObjects[_pvTag].GetPropertyValue(_pvProperty));
+
+                var sp = _pid.AdjustValue;
+                var currentMv = Convert.ToDouble(_flowsheet.SimulationObjects[_pid.ManipulatedObjectData.ID]
+                    .GetPropertyValue(_pid.ManipulatedObjectData.PropertyName));
+
+                var mv = _plc.Step(pv, sp, _stepSeconds, currentMv);
+                var raw = (int)Math.Round(mv * _scale);
+                raw = Math.Max(0, Math.Min(65535, raw));
+                _master.WriteSingleRegister(1, 0, (ushort)raw);
+                LastWritten = raw / _scale;
+
+                _bridge.ApplyInputs();
+            }
+
+            public void OnPostStep(int stepIndex, double simTime, RunStats stats)
+            {
+                _bridge.PublishOutputs();
+                _pvPublished = true;
+
+                _samples.Add(new ShadowSample
+                {
+                    Step = stepIndex,
+                    SimTime = simTime,
+                    Pv = _pid.PVValue,
+                    Sp = _pid.SPValue,
+                    InternalOutput = _pid.OutputAbs,
+                    ExternalOutput = _pid.ExternalMV,
+                    Deviation = _pid.ShadowDeviation,
+                    DeviationPctOfSpan = _span != 0.0 ? _pid.ShadowDeviation / _span * 100.0 : 0.0
+                });
+            }
+
+            public void OnControllerIteration(ISimulationObject controller) { }
+
+            public void OnError(Exception exception, int stepIndex) { }
+
+            public void OnRunFinished(RunStats stats) { }
         }
 
         private static void Check(bool condition, string message)
