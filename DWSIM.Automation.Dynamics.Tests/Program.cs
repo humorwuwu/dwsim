@@ -1033,9 +1033,10 @@ namespace DWSIM.Automation.Dynamics.Tests
                     var compared = samples.Skip(1).ToList();
                     var worst = compared.Count == 0
                         ? double.PositiveInfinity
-                        : compared.Max(s => Math.Abs(s.DeviationPctOfSpan));
-                    Console.WriteLine("shadow deviation: first={0:F2}%, worst after transfer={1:F2}% of span",
-                        samples.Count > 0 ? Math.Abs(samples[0].DeviationPctOfSpan) : double.NaN, worst);
+                        : compared.Max(s => Math.Abs(s.LawDeviationPctOfSpan));
+                    Console.WriteLine("shadow deviation: first={0:F2}%, worst after transfer={1:F2}% of span (same information); raw closed-loop worst={2:F2}%",
+                        samples.Count > 0 ? Math.Abs(samples[0].LawDeviationPctOfSpan) : double.NaN, worst,
+                        samples.Count == 0 ? double.NaN : samples.Max(s => Math.Abs(s.DeviationPctOfSpan)));
                     Check(worst < 5.0, string.Format(CultureInfo.InvariantCulture, "shadow: worst deviation {0:F2}% of span", worst));
 
                     // Guard against a degenerate pass: the loop has to have moved the valve.
@@ -1067,7 +1068,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             var path = Path.Combine(directory, "v5.1.7-shadow-deviation.csv");
             using (var writer = new StreamWriter(path))
             {
-                writer.WriteLine("step,sim_time_s,pv_m,sp_m,internal_output_pct,external_output_pct,deviation_pct,deviation_pct_of_span");
+                writer.WriteLine("step,sim_time_s,pv_m,sp_m,internal_output_pct,external_output_pct,deviation_pct,deviation_pct_of_span,same_information_deviation_pct,same_information_deviation_pct_of_span");
                 foreach (var sample in samples)
                 {
                     writer.WriteLine(string.Join(",", new[]
@@ -1079,7 +1080,9 @@ namespace DWSIM.Automation.Dynamics.Tests
                         sample.InternalOutput.ToString("F4", CultureInfo.InvariantCulture),
                         sample.ExternalOutput.ToString("F4", CultureInfo.InvariantCulture),
                         sample.Deviation.ToString("F4", CultureInfo.InvariantCulture),
-                        sample.DeviationPctOfSpan.ToString("F4", CultureInfo.InvariantCulture)
+                        sample.DeviationPctOfSpan.ToString("F4", CultureInfo.InvariantCulture),
+                        sample.LawDeviation.ToString("F4", CultureInfo.InvariantCulture),
+                        sample.LawDeviationPctOfSpan.ToString("F4", CultureInfo.InvariantCulture)
                     }));
                 }
             }
@@ -1096,6 +1099,8 @@ namespace DWSIM.Automation.Dynamics.Tests
             public double ExternalOutput;
             public double Deviation;
             public double DeviationPctOfSpan;
+            public double LawDeviation;
+            public double LawDeviationPctOfSpan;
         }
 
         /// <summary>Independent PI controller standing in for the PLC, with a 3% gain mismatch.</summary>
@@ -1163,6 +1168,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             private readonly List<ShadowSample> _samples;
             private readonly double _stepSeconds;
             private bool _pvPublished;
+            private double _previousInternal;
 
             public ShadowBenchHost(IPlantBridge bridge, ShadowPlc plc, IModbusMaster master, PIDController pid,
                                    IFlowsheet flowsheet, string pvTag, string pvProperty, double scale, double span,
@@ -1215,6 +1221,12 @@ namespace DWSIM.Automation.Dynamics.Tests
                 _bridge.PublishOutputs();
                 _pvPublished = true;
 
+                // The PLC command written this step was computed from the value published at the
+                // end of the previous step, so comparing it with the previous internal output is
+                // the same-information (control law) comparison; the raw difference additionally
+                // carries the one-step Modbus zero-order-hold lag.
+                var lawDeviation = _previousInternal - _pid.ExternalMV;
+
                 _samples.Add(new ShadowSample
                 {
                     Step = stepIndex,
@@ -1224,11 +1236,15 @@ namespace DWSIM.Automation.Dynamics.Tests
                     InternalOutput = _pid.OutputAbs,
                     ExternalOutput = _pid.ExternalMV,
                     Deviation = _pid.ShadowDeviation,
-                    DeviationPctOfSpan = _span != 0.0 ? _pid.ShadowDeviation / _span * 100.0 : 0.0
+                    DeviationPctOfSpan = _span != 0.0 ? _pid.ShadowDeviation / _span * 100.0 : 0.0,
+                    LawDeviation = lawDeviation,
+                    LawDeviationPctOfSpan = _span != 0.0 ? lawDeviation / _span * 100.0 : 0.0
                 });
+                _previousInternal = _pid.OutputAbs;
+
                 var row = _samples[_samples.Count - 1];
-                Console.WriteLine("shadow step {0}: pv={1:F4} sp={2:F4} internal={3:F4} external={4:F4} deviation={5:F4} ({6:F2}% of span)",
-                    row.Step, row.Pv, row.Sp, row.InternalOutput, row.ExternalOutput, row.Deviation, row.DeviationPctOfSpan);
+                Console.WriteLine("shadow step {0}: pv={1:F4} sp={2:F4} internal={3:F4} external={4:F4} deviation={5:F4} ({6:F2}% of span), same-information deviation={7:F2}%",
+                    row.Step, row.Pv, row.Sp, row.InternalOutput, row.ExternalOutput, row.Deviation, row.DeviationPctOfSpan, row.LawDeviationPctOfSpan);
             }
 
             public void OnControllerIteration(ISimulationObject controller) { }
