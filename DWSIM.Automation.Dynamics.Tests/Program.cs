@@ -988,16 +988,21 @@ namespace DWSIM.Automation.Dynamics.Tests
                     Check(samples.Count == stats.StepCount, "shadow: one deviation sample per step");
                     Check(pid.ShadowDeviationHistory.Count >= stats.StepCount, "shadow: deviation recorded every step");
 
-                    var worst = samples.Count == 0
+                    if (reportDirectory != null) WriteShadowReport(reportDirectory, samples);
+
+                    // The first step is the bumpless-transfer transient: the internal PID still
+                    // carries the derivative history of the phase before Shadow started.
+                    var compared = samples.Skip(1).ToList();
+                    var worst = compared.Count == 0
                         ? double.PositiveInfinity
-                        : samples.Max(s => Math.Abs(s.DeviationPctOfSpan));
+                        : compared.Max(s => Math.Abs(s.DeviationPctOfSpan));
+                    Console.WriteLine("shadow deviation: first={0:F2}%, worst after transfer={1:F2}% of span",
+                        samples.Count > 0 ? Math.Abs(samples[0].DeviationPctOfSpan) : double.NaN, worst);
                     Check(worst < 5.0, string.Format(CultureInfo.InvariantCulture, "shadow: worst deviation {0:F2}% of span", worst));
 
                     var mvActual = Convert.ToDouble(flowsheet.SimulationObjects[mvTag].GetPropertyValue(mvProperty));
                     Check(Math.Abs(mvActual - host.LastWritten) <= 1.0 / scale,
                         string.Format(CultureInfo.InvariantCulture, "shadow: PLC write reached the manipulated object ({0:F3} vs {1:F3})", mvActual, host.LastWritten));
-
-                    if (reportDirectory != null) WriteShadowReport(reportDirectory, samples);
                 }
                 catch (Exception ex)
                 {
@@ -1067,20 +1072,21 @@ namespace DWSIM.Automation.Dynamics.Tests
                 var baseSP = _pid.BaseSP.HasValue && _pid.BaseSP.Value != 0.0 ? _pid.BaseSP.Value : Math.Abs(sp);
                 if (baseSP == 0.0) baseSP = 1.0;
 
-                var error = (_pid.ReverseActing ? pv - sp : sp - pv) / baseSP;
+                // DWSIM's PID works with (PV - SP) / BaseSP.
+                var error = (pv - sp) / baseSP;
 
                 if (!_primed)
                 {
                     _primed = true;
                     var output0 = _pid.ReverseActing ? currentMv / baseSP - 1.0 : 1.0 - currentMv / baseSP;
                     _integral = GainMismatch * _pid.Ki != 0.0
-                        ? (output0 - GainMismatch * _pid.Kp * error - _pid.Offset / baseSP) / (GainMismatch * _pid.Ki)
+                        ? Clamp((output0 - GainMismatch * _pid.Kp * error - _pid.Offset / baseSP) / (GainMismatch * _pid.Ki))
                         : 0.0;
                     _lastError = error;
                 }
                 else
                 {
-                    _integral += error * dt;
+                    _integral = Clamp(_integral + error * dt);
                 }
 
                 var dTerm = (error - _lastError) / dt;
@@ -1090,6 +1096,11 @@ namespace DWSIM.Automation.Dynamics.Tests
                 var mv = _pid.ReverseActing ? (1.0 + output) * baseSP : (1.0 - output) * baseSP;
                 mv = Math.Min(_pid.OutputMax, Math.Max(_pid.OutputMin, mv));
                 return mv;
+            }
+
+            private double Clamp(double value)
+            {
+                return Math.Min(_pid.WindupGuard, Math.Max(-_pid.WindupGuard, value));
             }
         }
 
