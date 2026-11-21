@@ -921,6 +921,17 @@ namespace DWSIM.Automation.Dynamics.Tests
             var samples = new List<ShadowSample>();
             var scale = Math.Min(100.0, 32767.0 / Math.Max(Math.Abs(pid.OutputMin), Math.Abs(pid.OutputMax)));
             pid.Ownership = ControlOwnership.Shadow;
+            Console.WriteLine(
+                "shadow bench: mv={0}.{1}, pv={2}.{3}, Kp={4}, Ki={5}, Kd={6}, reverse={7}, limits=[{8},{9}], windup={10}, baseSP={11}, scale={12}, span={13}, sp={14}",
+                mvTag, mvProperty, pvTag, pvProperty,
+                pid.Kp.ToString("F4", CultureInfo.InvariantCulture),
+                pid.Ki.ToString("F4", CultureInfo.InvariantCulture),
+                pid.Kd.ToString("F4", CultureInfo.InvariantCulture),
+                pid.ReverseActing, pid.OutputMin, pid.OutputMax, pid.WindupGuard,
+                pid.BaseSP.HasValue ? pid.BaseSP.Value.ToString("F4", CultureInfo.InvariantCulture) : "null",
+                scale.ToString("F3", CultureInfo.InvariantCulture),
+                span.ToString("F3", CultureInfo.InvariantCulture),
+                pid.AdjustValue.ToString("F4", CultureInfo.InvariantCulture));
 
             var map = new SignalMap();
             map.Connections.Add(new ConnectionConfig
@@ -1179,6 +1190,9 @@ namespace DWSIM.Automation.Dynamics.Tests
                     Deviation = _pid.ShadowDeviation,
                     DeviationPctOfSpan = _span != 0.0 ? _pid.ShadowDeviation / _span * 100.0 : 0.0
                 });
+                var row = _samples[_samples.Count - 1];
+                Console.WriteLine("shadow step {0}: pv={1:F4} sp={2:F4} internal={3:F4} external={4:F4} deviation={5:F4} ({6:F2}% of span)",
+                    row.Step, row.Pv, row.Sp, row.InternalOutput, row.ExternalOutput, row.Deviation, row.DeviationPctOfSpan);
             }
 
             public void OnControllerIteration(ISimulationObject controller) { }
