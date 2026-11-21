@@ -927,11 +927,12 @@ namespace DWSIM.Automation.Dynamics.Tests
             pid.Ownership = ControlOwnership.Shadow;
 
             // Establish a defined operating point: earlier tests leave the setpoint wherever they
-            // left it, so start from the current level, clear the stale derivative history and
-            // prime the integral so the internal output equals the current manipulated value.
+            // left it, so start from a setpoint just below the current level (the drain valve then
+            // works in its linear range instead of pinned at a limit), clear the stale derivative
+            // history and prime the integral so the internal output equals the current MV.
             var startPv = Convert.ToDouble(flowsheet.SimulationObjects[pvTag].GetPropertyValue(pvProperty));
             var startMv = Convert.ToDouble(flowsheet.SimulationObjects[mvTag].GetPropertyValue(mvProperty));
-            pid.AdjustValue = startPv + 0.1;
+            pid.AdjustValue = startPv - 0.05;
             pid.BaseSP = null;
             var startBaseSP = Math.Abs(pid.AdjustValue);
             var startError = (startPv - pid.AdjustValue) / startBaseSP;
@@ -1178,7 +1179,7 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             public void OnPreStep(int stepIndex, double simTime)
             {
-                if (stepIndex == 6) _pid.AdjustValue += 0.1;   // mid-run setpoint step both controllers see
+                if (stepIndex == 6) _pid.AdjustValue -= 0.05;   // mid-run setpoint step both controllers see
 
                 var pv = _pvPublished
                     ? _master.ReadInputRegisters(1, 0, 1)[0] / 1000.0
