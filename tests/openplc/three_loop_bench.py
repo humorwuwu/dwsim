@@ -9,6 +9,7 @@ import math
 import time
 from pathlib import Path
 
+from impairment import SensorLink
 from pymodbus.datastore import (
     ModbusSequentialDataBlock,
     ModbusServerContext,
@@ -96,6 +97,11 @@ async def run(args):
         await asyncio.sleep(0.3)
         await wait_for_plc(hr_block, args.startup_timeout)
 
+        link = (
+            SensorLink(args.delay_ms / 1000.0, args.loss_pct / 100.0)
+            if args.delay_ms or args.loss_pct
+            else None
+        )
         temperature = 80.0
         pressure = 20.0
         level = 50.0
@@ -124,14 +130,17 @@ async def run(args):
             temperature = max(0.0, min(200.0, temperature))
             pressure = max(0.0, min(50.0, pressure))
             level = max(0.0, min(100.0, level))
-            ir_block.setValues(
-                1,
-                [
-                    int(round(temperature * 100.0)),
-                    int(round(pressure * 100.0)),
-                    int(round(level * 10.0)),
-                ],
-            )
+            measured = [
+                int(round(temperature * 100.0)),
+                int(round(pressure * 100.0)),
+                int(round(level * 10.0)),
+            ]
+            if link is None:
+                ir_block.setValues(1, measured)
+            else:
+                delivered = link.step(elapsed, measured)
+                if delivered is not None:
+                    ir_block.setValues(1, delivered)
 
             if not samples or elapsed - samples[-1]["time_s"] >= 0.5 - 1e-9:
                 samples.append(
@@ -159,6 +168,15 @@ async def run(args):
             writer.writeheader()
             writer.writerows(samples)
 
+        if link is not None:
+            print(
+                "sensor link: delay={} ms, loss={} %, dropped={} frames".format(
+                    args.delay_ms, args.loss_pct, link.dropped
+                )
+            )
+            if args.loss_pct and link.dropped == 0:
+                raise RuntimeError("configured packet loss was never injected")
+
         validate(samples)
         if not math.isfinite(samples[-1]["level_pv_pct"]):
             raise RuntimeError("simulation produced a non-finite value")
@@ -174,6 +192,8 @@ def main():
     parser.add_argument("--port", type=int, default=1502)
     parser.add_argument("--duration", type=float, default=300.0)
     parser.add_argument("--startup-timeout", type=float, default=90.0)
+    parser.add_argument("--delay-ms", type=float, default=0.0)
+    parser.add_argument("--loss-pct", type=float, default=0.0)
     parser.add_argument("--report", required=True)
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING)

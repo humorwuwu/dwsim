@@ -158,7 +158,7 @@ jobs:
 
   openplc-compiler:
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -170,6 +170,9 @@ jobs:
 
       - name: Run three-loop OpenPLC Runtime v4 virtual bench
         run: bash tests/openplc/run_three_loop_bench.sh
+
+      - name: Run impaired Modbus closed-loop bench (V-5.1.6)
+        run: bash tests/openplc/run_three_loop_bench.sh tests/openplc/h2sim-three-loop v5.1.6-impaired-three-loop.csv 20 1
 
       - name: Run OPC UA three-loop parity bench
         run: bash tests/openplc/run_opcua_three_loop_bench.sh

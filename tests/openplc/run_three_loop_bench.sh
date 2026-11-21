@@ -11,7 +11,9 @@ runtime_image="ghcr.io/autonomy-logic/openplc-runtime@sha256:378deec33b371eb09f8
 container_name="h2sim-openplc-runtime"
 work_dir="${RUNNER_TEMP:-/tmp}/h2sim-openplc-runtime"
 report_dir="$root/tests/reports/closed-loop"
-report="$report_dir/v5.1.2-4-three-loop.csv"
+report="$report_dir/${2:-v5.1.2-4-three-loop.csv}"
+delay_ms="${3:-0}"
+loss_pct="${4:-0}"
 mkdir -p "$work_dir" "$report_dir"
 
 appimage="${OPENPLC_EDITOR_APPIMAGE:-$work_dir/OpenPLC.Editor-${editor_version}.AppImage}"
@@ -68,7 +70,7 @@ fi
 
 plant_log="$work_dir/plant.log"
 "$work_dir/bench-venv/bin/python" "$root/tests/openplc/three_loop_bench.py" \
-  --report "$report" >"$plant_log" 2>&1 &
+  --report "$report" --delay-ms "$delay_ms" --loss-pct "$loss_pct" >"$plant_log" 2>&1 &
 plant_pid=$!
 
 upload_stdout="$work_dir/upload-stdout.txt"
