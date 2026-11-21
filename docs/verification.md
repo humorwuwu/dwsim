@@ -90,6 +90,24 @@
 - 边界：仍是独立虚拟过程模型，未接入 `DWSIM.Automation.Dynamics`；OPC UA
   Anonymous/engineer 仅用于隔离测试，正式部署需收紧为用户名或证书权限。
 
+## V-5.1.6 Modbus 延迟 + 丢包注入
+
+- 流程：与 V-5.1.2–V-5.1.4 同一套三回路 OpenPLC Runtime v4 台架（PLC 每 100 ms 经
+  FC4 读 `%IW0..2`、FC16 写 `%QW0..2`），在虚拟厂侧的传感器输入寄存器链路上注入
+  20 ms 延迟与 1% 丢包（`tests/openplc/impairment.py`，固定随机种子）。
+- 判据：与 V-5.1.2–4 相同（温度超调 < 5%、温度稳态误差 < 0.5 K、压力 < 0.5 bar、
+  液位 < 1%），且不得出现振荡发散。
+- 实测：链路丢帧 28 帧（约 0.9%）；温度峰值 84.938 °C、超调 -1.25%、稳态 84.645 °C、
+  误差 0.355 K；压力稳态 29.973 bar、误差 0.027 bar；液位稳态 69.823%、误差 0.177%。
+  与未注入链路（峰值 84.954 °C / 误差 0.330 K、压力 0.025 bar、液位 0.178%）相比
+  偏差很小，闭环仍稳定。
+- 结果：**PASS**（CI run `44910799357`，`openplc-compiler` job）。
+- 证据：[`tests/reports/closed-loop/v5.1.6-impaired-three-loop.csv`](../tests/reports/closed-loop/v5.1.6-impaired-three-loop.csv)。
+- 边界：注入在 Python 虚拟厂侧的输入寄存器链路上完成，没有使用 OS 级 `tc netem`
+  （Windows CI 无 `tc`，Linux 台架跑在 host network 容器里、netem 需要额外权限），
+  因此覆盖的是 I/O 级时延与丢包，不含真实 TCP 重传行为。链路侧仍是独立虚拟过程
+  模型，未接入 DWSIM 动态模型。
+
 ## 本地 macOS（Mono 6.12，x86_64 / Rosetta）
 
 - `DWSIM.H2sim.Io.Tests`：**PASS**。覆盖 SignalMap 序列化/校验、缩放方向、NModbus 真实 TCP 自环。
@@ -138,7 +156,7 @@
 
 | 用例 | 依赖 |
 |---|---|
-| V-5.1.6 ~ V-5.1.10 | 延迟/丢包、Shadow、联锁、时序和超时策略 |
+| V-5.1.7 ~ V-5.1.10 | Shadow、联锁、时序和超时策略 |
 | T-5.2 剩余数值回归 | Dinh 2021 原始曲线、R2 曲线、ALK 黄金数据 |
 | macOS 运行 | Gate 0 V-3 原生产物与 Rosetta 启动 |
 
