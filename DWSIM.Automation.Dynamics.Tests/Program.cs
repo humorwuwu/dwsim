@@ -967,7 +967,7 @@ namespace DWSIM.Automation.Dynamics.Tests
                 Check(bridge.Connect(map, flowsheet), "shadow: bridge connects: " + bridge.Status.Message);
                 if (!bridge.Status.Connected) return;
 
-                ModbusMaster master = null;
+                IModbusMaster master = null;
                 TcpClient client = null;
                 try
                 {
@@ -1100,7 +1100,7 @@ namespace DWSIM.Automation.Dynamics.Tests
         {
             private readonly IPlantBridge _bridge;
             private readonly ShadowPlc _plc;
-            private readonly ModbusMaster _master;
+            private readonly IModbusMaster _master;
             private readonly PIDController _pid;
             private readonly IFlowsheet _flowsheet;
             private readonly string _pvTag;
@@ -1111,7 +1111,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             private readonly double _stepSeconds;
             private bool _pvPublished;
 
-            public ShadowBenchHost(IPlantBridge bridge, ShadowPlc plc, ModbusMaster master, PIDController pid,
+            public ShadowBenchHost(IPlantBridge bridge, ShadowPlc plc, IModbusMaster master, PIDController pid,
                                    IFlowsheet flowsheet, string pvTag, string pvProperty, double scale, double span,
                                    List<ShadowSample> samples, double stepSeconds)
             {
