@@ -907,7 +907,6 @@ namespace DWSIM.Automation.Dynamics.Tests
             var mvProperty = pid.ManipulatedObjectData.PropertyName;
             var pvTag = pid.ControlledObjectData.ID;
             var pvProperty = pid.ControlledObjectData.PropertyName;
-            var span = pid.OutputMax - pid.OutputMin;
 
             var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
             var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
@@ -919,8 +918,30 @@ namespace DWSIM.Automation.Dynamics.Tests
             probe.Stop();
 
             var samples = new List<ShadowSample>();
+            // The sample leaves the PID output limits at the +/-1000 defaults, which no valve can
+            // reach; the bench uses the valve's physical 0-100% range so "5% of span" is meaningful.
+            pid.OutputMin = 0.0;
+            pid.OutputMax = 100.0;
+            var span = pid.OutputMax - pid.OutputMin;
             var scale = Math.Min(100.0, 32767.0 / Math.Max(Math.Abs(pid.OutputMin), Math.Abs(pid.OutputMax)));
             pid.Ownership = ControlOwnership.Shadow;
+
+            // Establish a defined operating point: earlier tests leave the setpoint wherever they
+            // left it, so start from the current level, clear the stale derivative history and
+            // prime the integral so the internal output equals the current manipulated value.
+            var startPv = Convert.ToDouble(flowsheet.SimulationObjects[pvTag].GetPropertyValue(pvProperty));
+            var startMv = Convert.ToDouble(flowsheet.SimulationObjects[mvTag].GetPropertyValue(mvProperty));
+            pid.AdjustValue = startPv + 0.1;
+            pid.BaseSP = null;
+            var startBaseSP = Math.Abs(pid.AdjustValue);
+            var startError = (startPv - pid.AdjustValue) / startBaseSP;
+            pid.CurrentError = startError;
+            pid.LastError = startError;
+            var startOutput = pid.ReverseActing ? startMv / startBaseSP - 1.0 : 1.0 - startMv / startBaseSP;
+            pid.ITerm = pid.Ki != 0.0
+                ? Math.Min(pid.WindupGuard, Math.Max(-pid.WindupGuard,
+                    (startOutput - pid.Kp * startError - pid.Offset / startBaseSP) / pid.Ki))
+                : 0.0;
             Console.WriteLine(
                 "shadow bench: mv={0}.{1}, pv={2}.{3}, Kp={4}, Ki={5}, Kd={6}, reverse={7}, limits=[{8},{9}], windup={10}, baseSP={11}, scale={12}, span={13}, sp={14}",
                 mvTag, mvProperty, pvTag, pvProperty,
@@ -1157,6 +1178,8 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             public void OnPreStep(int stepIndex, double simTime)
             {
+                if (stepIndex == 6) _pid.AdjustValue += 0.1;   // mid-run setpoint step both controllers see
+
                 var pv = _pvPublished
                     ? _master.ReadInputRegisters(1, 0, 1)[0] / 1000.0
                     : Convert.ToDouble(_flowsheet.SimulationObjects[_pvTag].GetPropertyValue(_pvProperty));
