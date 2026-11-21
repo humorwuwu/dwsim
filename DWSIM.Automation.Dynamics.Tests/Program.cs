@@ -959,9 +959,6 @@ namespace DWSIM.Automation.Dynamics.Tests
                 ConnectionName = "Shadow"
             });
 
-            var samples = new List<ShadowSample>();
-            pid.Ownership = ControlOwnership.Shadow;
-
             using (var bridge = new ModbusTcpServerBridge())
             {
                 Check(bridge.Connect(map, flowsheet), "shadow: bridge connects: " + bridge.Status.Message);
