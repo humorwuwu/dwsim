@@ -428,12 +428,14 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(heatError < 0.02, string.Format(CultureInfo.InvariantCulture,
                 "energy balance: {0}: heat removed {1:F3} kW vs heat generated {2:F3} kW", file, coolingKW, expectedHeatKW));
 
-            // Closing the balance: the electrical input splits into LHV chemical energy plus heat.
-            var balanceError = Math.Abs(electricalKW - chemicalKW - coolingKW) / Math.Max(electricalKW, 1e-12);
-            Console.WriteLine("energy {0}: electrical - chemical - heat closes to {1:P2} of input", file, balanceError);
-            Check(balanceError < 0.02, string.Format(CultureInfo.InvariantCulture,
-                "energy balance: {0}: input {1:F3} kW vs chemical {2:F3} + heat {3:F3} kW (gap {4:P2})",
-                file, electricalKW, chemicalKW, coolingKW, balanceError));
+            // Closing the balance: electrolysis splits liquid water, so the electrical input
+            // equals the thermoneutral (HHV) power plus the heat generated. The LHV basis omits
+            // water's latent heat and therefore leaves a gap by construction.
+            var balanceError = Math.Abs(electricalKW - thermoneutralKW - coolingKW) / Math.Max(electricalKW, 1e-12);
+            Console.WriteLine("energy {0}: thermoneutral + heat closes to {1:P4} of input", file, balanceError);
+            Check(balanceError < 1e-6, string.Format(CultureInfo.InvariantCulture,
+                "energy balance: {0}: input {1:F3} kW vs thermoneutral {2:F3} + heat {3:F3} kW (gap {4:P4})",
+                file, electricalKW, thermoneutralKW, coolingKW, balanceError));
         }
 
         private static MaterialStream ConnectedStream(IFlowsheet flowsheet, ElectrolyzerUnitOpBase unit, int index, bool inlet)
