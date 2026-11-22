@@ -61,6 +61,12 @@ namespace DWSIM.Automation.Dynamics
 
             integrator.RealTime = options.RealTime;
 
+            // Unit operations read the integrator step when they run their own dynamic model, so
+            // an override has to reach the integrator too, not just the loop's own interval.
+            var previousIntegrationStep = integrator.IntegrationStep;
+            if (!options.RealTime && Math.Abs(options.StepSeconds - previousIntegrationStep.TotalSeconds) > 1e-12)
+                integrator.IntegrationStep = TimeSpan.FromSeconds(options.StepSeconds);
+
             var stats = new RunStats();
             var historian = options.Historian ?? new Dictionary<DateTime, string>();
             IFlowsheet clone = null;
@@ -215,6 +221,7 @@ namespace DWSIM.Automation.Dynamics
             {
                 flowsheet.SupressMessages = false;
                 flowsheet.DynamicMode = previousDynamicMode;
+                integrator.IntegrationStep = previousIntegrationStep;
 
                 if (started)
                 {
