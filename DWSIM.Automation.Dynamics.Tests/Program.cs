@@ -381,7 +381,7 @@ namespace DWSIM.Automation.Dynamics.Tests
                 {
                     Id = "TRIP",
                     Direction = SignalDirection.ToPlc,
-                    ObjectTag = unit.GraphicObject.Tag,
+                    ObjectTag = unit.Name,
                     Property = "Trip Latched",
                     Unit = "",
                     Type = SignalDataType.Bool,
@@ -393,7 +393,7 @@ namespace DWSIM.Automation.Dynamics.Tests
                 {
                     Id = "POWER",
                     Direction = SignalDirection.ToPlc,
-                    ObjectTag = unit.GraphicObject.Tag,
+                    ObjectTag = unit.Name,
                     Property = "Power",
                     Unit = "kW",
                     Type = SignalDataType.Int16,
@@ -406,7 +406,7 @@ namespace DWSIM.Automation.Dynamics.Tests
                 {
                     Id = "H2INO2",
                     Direction = SignalDirection.ToPlc,
-                    ObjectTag = unit.GraphicObject.Tag,
+                    ObjectTag = unit.Name,
                     Property = "H2 in O2",
                     Unit = "",
                     Type = SignalDataType.Int16,
