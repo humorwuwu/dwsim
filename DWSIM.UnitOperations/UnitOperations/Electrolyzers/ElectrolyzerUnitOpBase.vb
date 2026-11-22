@@ -484,7 +484,10 @@ Namespace UnitOperations
                 .pCat = pCat,
                 .pAn = pAn,
                 .etaF_ref = ParameterValue("etaF_ref", 0.99),
-                .i_ref = ParameterValue("i_ref", 1.0)
+                .i_ref = ParameterValue("i_ref", 1.0),
+                .pCat_ref = ParameterValue("P_cat", 1.0),
+                .T_ref = ParameterValue("T_op", 353.15),
+                .E_perm = ParameterValue("E_perm", 20000.0)
             }
 
             Dim mode = CInt(ParameterValue("SetpointMode", 0.0))

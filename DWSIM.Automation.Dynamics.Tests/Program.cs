@@ -1210,6 +1210,26 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(lowH2inO2 > 4.0, "low-load H2-in-O2 exceeds the 4 vol% LEL");
             Check(ratedH2inO2 < lowH2inO2, "H2-in-O2 falls as load rises");
             Check(lowH2inO2 <= 100.0 && ratedH2inO2 >= 0.0, "gas impurity stays in percent bounds");
+
+            // Membrane permeation follows the partial-pressure difference and an Arrhenius
+            // temperature dependence, so it must grow with cathode pressure and with temperature.
+            double atReference = calculator.CrossoverMolarFlow(1.0, 1e-4);
+            double atHighPressure = new ElectrolyzerCalculator { pCat = 60.0, pCat_ref = 30.0, T = 353.15, T_ref = 353.15 }
+                .CrossoverMolarFlow(1.0, 1e-4);
+            Check(Math.Abs(atHighPressure - 2.0 * atReference) < 1e-12,
+                string.Format(CultureInfo.InvariantCulture,
+                    "crossover scales with cathode pressure: {0:E3} vs {1:E3}", atHighPressure, atReference));
+
+            double atHighTemperature = new ElectrolyzerCalculator { pCat = 30.0, pCat_ref = 30.0, T = 363.15, T_ref = 353.15 }
+                .CrossoverMolarFlow(1.0, 1e-4);
+            Check(atHighTemperature > atReference,
+                string.Format(CultureInfo.InvariantCulture,
+                    "crossover rises with temperature: {0:E3} vs {1:E3}", atHighTemperature, atReference));
+
+            double atReferenceConditions = new ElectrolyzerCalculator { pCat = 30.0, pCat_ref = 30.0, T = 353.15, T_ref = 353.15 }
+                .CrossoverMolarFlow(1.0, 1e-4);
+            Check(Math.Abs(atReferenceConditions - 1e-4) < 1e-15,
+                "crossover equals the coefficient at its reference conditions");
         }
 
         private static void TestBridgeHost(IFlowsheet flowsheet)

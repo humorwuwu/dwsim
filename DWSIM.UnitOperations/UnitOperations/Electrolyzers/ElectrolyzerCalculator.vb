@@ -82,13 +82,29 @@ Namespace UnitOperations
 
         End Function
 
-        ''' <summary>Cross-membrane gas flow (mol/s), increasing as load falls.</summary>
+        ''' <summary>
+        ''' Cross-membrane gas flow (mol/s). Membrane permeation is driven by the partial-pressure
+        ''' difference and follows an Arrhenius temperature dependence, so the base coefficient is
+        ''' scaled by the cathode/anode pressure ratio and the temperature relative to the reference.
+        ''' The load dependence (1/i) reproduces the larger relative impact at low current density.
+        ''' </summary>
         Public Function CrossoverMolarFlow(i As Double, crossoverCoeff As Double) As Double
 
             If i <= 0.0 Then Return 0.0
-            Return Math.Max(crossoverCoeff, 0.0) / i
+            Dim pressureFactor = If(pCat > 0.0, Math.Max(pCat, 0.0) / Math.Max(pCat_ref, 1.0E-9), 1.0)
+            Dim temperatureFactor = Math.Exp(-E_perm / 8.314 * (1.0 / Math.Max(T, 1.0) - 1.0 / Math.Max(T_ref, 1.0)))
+            Return Math.Max(crossoverCoeff, 0.0) * pressureFactor * temperatureFactor / i
 
         End Function
+
+        ''' <summary>Reference pressure for the crossover coefficient, in bar.</summary>
+        Public Property pCat_ref As Double = 30.0
+
+        ''' <summary>Reference temperature for the crossover coefficient, in K.</summary>
+        Public Property T_ref As Double = 353.15
+
+        ''' <summary>Activation energy of hydrogen permeation through the membrane, J/mol.</summary>
+        Public Property E_perm As Double = 20000.0
 
         ''' <summary>Calculates both gas stream impurity concentrations in volume percent.</summary>
         Public Sub GasPurity(i As Double, crossoverCoeff As Double,
