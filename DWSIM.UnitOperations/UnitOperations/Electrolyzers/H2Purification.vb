@@ -49,6 +49,8 @@ Namespace UnitOperations
 
         Public Property ProductPurity As Double
 
+        Public Property ProductImpurity As Double
+
         Public Property O2Removal As Double
 
         Public Property H2ORemoval As Double
@@ -166,7 +168,12 @@ Namespace UnitOperations
             SetStream(offGasStream, names, offGasFlows, pressure, temperature)
 
             H2Recovery = (nH2 - h2Loss) / nH2
-            ProductPurity = 1.0E6 * productFlows(h2Index) / Math.Max(productFlows.Sum(), 1.0E-12)
+            ' H2 content of the product in ppm, and the impurity level as what remains of the same
+            ' total (not 1e6 minus the content: the product also carries nitrogen and any other
+            ' species the feed brought in).
+            Dim productTotal = Math.Max(productFlows.Sum(), 1.0E-12)
+            ProductPurity = 1.0E6 * productFlows(h2Index) / productTotal
+            ProductImpurity = Math.Max(0.0, 1.0E6 - ProductPurity)
             O2Removal = o2Removed
             H2ORemoval = waterRemoved
             RegenerationDuty = removed * 50.0 / 1000.0
@@ -192,7 +199,7 @@ Namespace UnitOperations
         End Sub
 
         Public Overrides Function GetProperties(proptype As PropertyType) As String()
-            Return New String() {"H2 Recovery", "Product Purity", "Pressure Drop", "Regeneration Duty", "O2 Removal", "H2O Removal"}
+            Return New String() {"H2 Recovery", "Product Purity", "Product Impurity", "Pressure Drop", "Regeneration Duty", "O2 Removal", "H2O Removal"}
         End Function
 
         Public Overrides Function GetPropertyValue(prop As String, Optional su As IUnitsOfMeasure = Nothing) As Object
@@ -200,6 +207,7 @@ Namespace UnitOperations
             Select Case prop
                 Case "H2 Recovery" : Return H2Recovery
                 Case "Product Purity" : Return ProductPurity
+                Case "Product Impurity" : Return ProductImpurity
                 Case "Pressure Drop" : Return PressureDropBar
                 Case "Regeneration Duty" : Return RegenerationDuty
                 Case "O2 Removal" : Return O2Removal
@@ -212,7 +220,7 @@ Namespace UnitOperations
         Public Overrides Function GetPropertyUnit(prop As String, Optional su As IUnitsOfMeasure = Nothing) As String
 
             Select Case prop
-                Case "Product Purity" : Return "ppm"
+                Case "Product Purity", "Product Impurity" : Return "ppm"
                 Case "Pressure Drop" : Return "bar"
                 Case "Regeneration Duty" : Return "kW"
                 Case "O2 Removal", "H2O Removal" : Return "mol/s"
@@ -225,7 +233,7 @@ Namespace UnitOperations
 
             Dim sb As New Text.StringBuilder()
             sb.AppendLine(String.Format(ci, "H2 recovery: {0}", H2Recovery.ToString(nf, ci)))
-            sb.AppendLine(String.Format(ci, "Product purity: {0} ppm", ProductPurity.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Product H2 content: {0} ppm, impurity: {1} ppm", ProductPurity.ToString(nf, ci), ProductImpurity.ToString(nf, ci)))
             sb.AppendLine(String.Format(ci, "Pressure drop: {0} bar", PressureDropBar.ToString(nf, ci)))
             sb.AppendLine(String.Format(ci, "Regeneration duty: {0} kW", RegenerationDuty.ToString(nf, ci)))
             Return sb.ToString()

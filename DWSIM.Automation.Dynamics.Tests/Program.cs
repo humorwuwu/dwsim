@@ -91,6 +91,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestThermalGoldenData();
             TestStackHeatLossShare();
             TestGasPurityRegression();
+            TestPurificationPurity();
             TestFaradayEfficiency();
             TestInterlocks();
             TestDynamicSupport();
@@ -1245,6 +1246,20 @@ namespace DWSIM.Automation.Dynamics.Tests
             // Reference-free case: an ideal Faraday efficiency must stay exactly 1 at any load.
             var ideal = new ElectrolyzerCalculator { Model = new ModelPEM_Springer(), etaF_ref = 1.0 };
             Check(Math.Abs(ideal.FaradayEfficiency(0.1) - 1.0) < 1e-12, "ideal Faraday efficiency has no crossover loss");
+        }
+
+        /// <summary>
+        /// The purifier's two purity figures must describe the same gas: H2 content plus impurity
+        /// equals 1e6 ppm, and the impurity must be near the configured target rather than the
+        /// H2 content read the wrong way round.
+        /// </summary>
+        private static void TestPurificationPurity()
+        {
+            var purifier = new H2Purification { ProductPurityPpm = 10.0, H2LossFraction = 0.005 };
+            Check(purifier.GetPropertyUnit("Product Purity") == "ppm", "purifier purity unit is ppm");
+            Check(purifier.GetPropertyUnit("Product Impurity") == "ppm", "purifier impurity unit is ppm");
+            Check(Array.IndexOf(purifier.GetProperties(PropertyType.ALL), "Product Impurity") >= 0,
+                "purifier lists the impurity property");
         }
 
         private static void TestGasPurityRegression()
