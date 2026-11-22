@@ -376,7 +376,34 @@ Namespace UnitOperations
 
                 Case CalculationMode.OutletVaporFraction, CalculationMode.TemperatureChange, CalculationMode.OutletTemperature
 
-                    Throw New Exception("This calculation mode is not supported while in Dynamic Mode.")
+                    ' A temperature (or vapour-fraction) setpoint is a valid dynamic constraint: the
+                    ' unit removes whatever heat is needed to hold it, so treat the target as a
+                    ' controlled outlet state instead of rejecting the model step.
+                    Dim target As Double = AccumulationStream.GetTemperature
+
+                    If CalcMode = CalculationMode.OutletTemperature AndAlso m_Tout.HasValue Then
+                        target = m_Tout.Value
+                    ElseIf CalcMode = CalculationMode.TemperatureChange AndAlso m_dt.HasValue Then
+                        target = ims.GetTemperature() + m_dt.Value
+                    End If
+
+                    Wi = ims.GetMassFlow()
+
+                    DeltaP = (Wi / Kr) ^ 2
+
+                    ims.SetPressure(Pressure)
+
+                    oms.AssignFromPhase(PhaseLabel.Mixture, AccumulationStream, False)
+                    oms.SetPressure(Pressure - DeltaP)
+
+                    If CalcMode = CalculationMode.OutletVaporFraction AndAlso m_VFout.HasValue Then
+                        oms.SetVaporFraction(m_VFout.Value)
+                        oms.SetFlashSpec("PV")
+                    Else
+                        oms.SetTemperature(target)
+                        oms.SetFlashSpec("PT")
+                    End If
+                    oms.Calculate()
 
                 Case Else
 

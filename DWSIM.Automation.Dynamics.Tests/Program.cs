@@ -194,7 +194,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             flowsheet.ConnectObjects(purification.GraphicObject, offGas.GraphicObject, 1, 0);
 
             // Two-stage compression with interstage cooling and knock-out, 30 -> 90 -> 250 bar.
-            AddCompressionTrain(flowsheet, baseFlowsheet, purifiedH2, compressedH2, unit);
+            AddCompressionTrain(flowsheet, baseFlowsheet, purifiedH2, compressedH2);
             flowsheet.ConnectObjects(compressedH2.GraphicObject, storage.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(storage.GraphicObject, storedH2.GraphicObject, 0, 0);
 
@@ -230,11 +230,10 @@ namespace DWSIM.Automation.Dynamics.Tests
         /// (90 -> 250 bar). Each stage has its own energy stream.
         /// </summary>
         private static void AddCompressionTrain(IFlowsheet flowsheet, DWSIM.FlowsheetBase.FlowsheetBase baseFlowsheet,
-                                                MaterialStream feed, MaterialStream product, ElectrolyzerUnitOpBase unit)
+                                                MaterialStream feed, MaterialStream product)
         {
             var stage1Out = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 700, 30, "H2-90BAR");
             var stage1Power = (DWSIM.UnitOperations.Streams.EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 700, 90, "W-C1");
-            var coolerDuty = (DWSIM.UnitOperations.Streams.EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 730, 90, "Q-E1");
             var afterCooler = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 760, 30, "H2-90BAR-C");
             var knockOutGas = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 820, 30, "H2-90BAR-DRY");
             var knockOutLiquid = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 820, 90, "H2-KO-COND");
@@ -246,12 +245,9 @@ namespace DWSIM.Automation.Dynamics.Tests
             stage1.AdiabaticEfficiency = 75.0;
 
             var cooler = (Cooler)flowsheet.AddObject(ObjectType.Cooler, 730, 30, "E-1");
-            // Dynamic mode only supports heat-driven or energy-stream coolers; a fixed outlet
-            // temperature is a steady-state control mode. The duty brings the interstage stream
-            // back to about 313 K (adiabatic stage at 75% efficiency, ~29 J/mol/K for hydrogen).
-            cooler.CalcMode = Cooler.CalculationMode.EnergyStream;
+            cooler.CalcMode = Cooler.CalculationMode.OutletTemperature;
+            cooler.OutletTemperature = 313.15;
             cooler.DeltaP = 0.0;
-            coolerDuty.EnergyFlow = unit is AlkalineElectrolyzer ? 35.3 : 10.2;
 
             var knockOut = (Vessel)flowsheet.AddObject(ObjectType.Vessel, 790, 30, "KO-1");
 
@@ -264,7 +260,6 @@ namespace DWSIM.Automation.Dynamics.Tests
             flowsheet.ConnectObjects(stage1Power.GraphicObject, stage1.GraphicObject, 0, 1);
             flowsheet.ConnectObjects(stage1.GraphicObject, stage1Out.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(stage1Out.GraphicObject, cooler.GraphicObject, 0, 0);
-            flowsheet.ConnectObjects(coolerDuty.GraphicObject, cooler.GraphicObject, 0, 1);
             flowsheet.ConnectObjects(cooler.GraphicObject, afterCooler.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(afterCooler.GraphicObject, knockOut.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(knockOut.GraphicObject, knockOutGas.GraphicObject, 0, 0);
