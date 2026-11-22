@@ -27,6 +27,18 @@ Namespace UnitOperations
 
         Public Overrides ReadOnly Property Prefix As String = "H2PUR-"
 
+        ''' <summary>
+        ''' The purifier is modelled as quasi-steady (no inventory), so it can take part in a
+        ''' dynamic run by recalculating with the current inlet stream.
+        ''' </summary>
+        Public Overrides ReadOnly Property SupportsDynamicMode As Boolean = True
+
+        Public Overrides ReadOnly Property HasPropertiesForDynamicMode As Boolean = False
+
+        Public Overrides Sub RunDynamicModel()
+            Calculate()
+        End Sub
+
         Public Property ProductPurityPpm As Double = 10.0
 
         Public Property H2LossFraction As Double = 0.005

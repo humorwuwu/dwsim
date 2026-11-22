@@ -134,6 +134,13 @@ Namespace UnitOperations
             AddParameter("Cp_stack", "Stack specific heat", 500.0, "J/kgK")
             AddParameter("U_loss_area", "Stack heat loss coefficient", 50.0, "W/K")
 
+            ' Alkaline electrode kinetics and ohmic losses (used by ModelAlkaline_SemiEmpirical).
+            AddParameter("a_act", "ALK Tafel intercept", 0.30, "V")
+            AddParameter("b_act", "ALK Tafel slope", 0.06, "V")
+            AddParameter("ASR", "ALK area-specific resistance", 0.50, "ohm*cm2")
+            AddParameter("KOH_wt", "KOH mass fraction", 0.30, "")
+            AddParameter("i_L", "Limiting current density", 1.2, "A/cm2")
+
             StackTemperature = 353.15
 
         End Sub
@@ -446,6 +453,9 @@ Namespace UnitOperations
                 m.i_L = Math.Max(1.0E-6, ParameterValue("i_L", m.i_L))
                 m.KOH_wt = ParameterValue("KOH_wt", m.KOH_wt)
                 m.t_mem = ParameterValue("t_mem", m.t_mem)
+                m.a_act = ParameterValue("a_act", m.a_act)
+                m.b_act = ParameterValue("b_act", m.b_act)
+                m.AreaSpecificResistance = ParameterValue("ASR", m.AreaSpecificResistance)
                 m.rho_electrode = ParameterValue("rho_electrode", m.rho_electrode)
                 m.t_electrode = ParameterValue("t_electrode", m.t_electrode)
             End If

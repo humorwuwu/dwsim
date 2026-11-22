@@ -281,8 +281,8 @@ namespace DWSIM.Automation.Dynamics.Tests
         }
 
         /// <summary>
-        /// Per-compound molar balance around the electrolyzer: feed plus the water split into
-        /// H2 and O2 must equal what leaves in the two gas outlets.
+        /// Element balance around the electrolyzer. Hydrogen and oxygen are produced by splitting
+        /// water, so compounds do not balance individually; the elements H and O do.
         /// </summary>
         private static void CheckComponentBalance(IFlowsheet flowsheet, ElectrolyzerUnitOpBase unit, string file)
         {
@@ -292,33 +292,23 @@ namespace DWSIM.Automation.Dynamics.Tests
             var o2 = ConnectedStream(flowsheet, unit, 1, false);
             var coolingOut = ConnectedStream(flowsheet, unit, 2, false);
             Check(feed != null && h2 != null && o2 != null, "mass balance: streams connected: " + file);
+            if (feed != null && coolingIn != null) Check(coolingOut != null, "mass balance: cooling loop closed: " + file);
             if (feed == null || h2 == null || o2 == null) return;
 
-            var compounds = feed.Phases[0].Compounds.Keys.ToList();
-            var worst = 0.0;
-            var worstCompound = "";
-            foreach (var compound in compounds)
-            {
-                var inlet = MolarFlow(feed, compound);
-                if (coolingIn != null && coolingIn.Phases[0].Compounds.ContainsKey(compound))
-                    inlet += MolarFlow(coolingIn, compound);
-                var outlet = MolarFlow(h2, compound) + MolarFlow(o2, compound);
-                if (coolingOut != null && coolingOut.Phases[0].Compounds.ContainsKey(compound))
-                    outlet += MolarFlow(coolingOut, compound);
+            // Moles of hydrogen atoms and of oxygen atoms in each stream.
+            var hydrogenIn = HydrogenAtoms(feed) + (coolingIn != null ? HydrogenAtoms(coolingIn) : 0.0);
+            var hydrogenOut = HydrogenAtoms(h2) + HydrogenAtoms(o2) + (coolingOut != null ? HydrogenAtoms(coolingOut) : 0.0);
+            var oxygenIn = OxygenAtoms(feed) + (coolingIn != null ? OxygenAtoms(coolingIn) : 0.0);
+            var oxygenOut = OxygenAtoms(h2) + OxygenAtoms(o2) + (coolingOut != null ? OxygenAtoms(coolingOut) : 0.0);
 
-                var reference = Math.Max(Math.Abs(inlet), Math.Abs(outlet));
-                if (reference < 1e-12) continue;
-                var error = Math.Abs(inlet - outlet) / reference;
-                if (error > worst)
-                {
-                    worst = error;
-                    worstCompound = compound;
-                }
-            }
-
-            Console.WriteLine("balance {0}: worst compound {1} closed to {2:E3}", file, worstCompound, worst);
-            Check(worst < 1e-8, string.Format(CultureInfo.InvariantCulture,
-                "mass balance: {0}: compound '{1}' closes to {2:E3} (limit 1e-8)", file, worstCompound, worst));
+            var hydrogenError = Math.Abs(hydrogenIn - hydrogenOut) / Math.Max(hydrogenIn, 1e-12);
+            var oxygenError = Math.Abs(oxygenIn - oxygenOut) / Math.Max(oxygenIn, 1e-12);
+            Console.WriteLine("balance {0}: H atoms close to {1:E3}, O atoms to {2:E3}",
+                file, hydrogenError, oxygenError);
+            Check(hydrogenError < 1e-8, string.Format(CultureInfo.InvariantCulture,
+                "mass balance: {0}: hydrogen atoms close to {1:E3} (limit 1e-8)", file, hydrogenError));
+            Check(oxygenError < 1e-8, string.Format(CultureInfo.InvariantCulture,
+                "mass balance: {0}: oxygen atoms close to {1:E3} (limit 1e-8)", file, oxygenError));
 
             var inletMass = feed.GetMassFlow() + (coolingIn?.GetMassFlow() ?? 0.0);
             var outletMass = h2.GetMassFlow() + o2.GetMassFlow() + (coolingOut?.GetMassFlow() ?? 0.0);
@@ -327,9 +317,39 @@ namespace DWSIM.Automation.Dynamics.Tests
                 "mass balance: {0}: total mass closes to {1:E3} (limit 1e-8)", file, massError));
         }
 
+        private static double HydrogenAtoms(MaterialStream stream)
+        {
+            var compounds = stream.Phases[0].Compounds;
+            var atoms = 0.0;
+            foreach (var pair in compounds)
+            {
+                var name = pair.Key.ToLowerInvariant();
+                var flow = pair.Value.MolarFlow.GetValueOrDefault();
+                // Water, hydrogen and heavy water are the only hydrogen-bearing species here.
+                if (name.Contains("hydrogen") || name.Contains("water")) atoms += 2.0 * flow;
+            }
+            return atoms;
+        }
+
+        private static double OxygenAtoms(MaterialStream stream)
+        {
+            var compounds = stream.Phases[0].Compounds;
+            var atoms = 0.0;
+            foreach (var pair in compounds)
+            {
+                var name = pair.Key.ToLowerInvariant();
+                var flow = pair.Value.MolarFlow.GetValueOrDefault();
+                if (name == "oxygen") atoms += 2.0 * flow;
+                else if (name.Contains("water")) atoms += 1.0 * flow;
+            }
+            return atoms;
+        }
+
         /// <summary>
-        /// Electrical power in equals the chemical power leaving in H2 plus the heat removed.
-        /// Uses the hydrogen LHV basis the model already reports.
+        /// Electrical power in equals the chemical power leaving in H2 plus the heat generated.
+        /// The model routes the heat above the thermoneutral voltage to the coolant, so the
+        /// check is: chemical (LHV) + cooling duty == electrical input, and the efficiency must
+        /// stay physically possible (below 100% on both LHV and HHV bases).
         /// </summary>
         private static void CheckEnergyBalance(IFlowsheet flowsheet, ElectrolyzerUnitOpBase unit, string file)
         {
@@ -337,23 +357,20 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(h2 != null, "energy balance: hydrogen outlet connected: " + file);
             if (h2 == null) return;
 
-            // 241.826 kJ/mol is the LHV of water; the model already reports the LHV efficiency.
             const double lhvKjPerMol = 241.826;
-            var hydrogenMolarFlow = MolarFlow(h2, "Hydrogen");
-            var chemicalKW = hydrogenMolarFlow * lhvKjPerMol;
+            var chemicalKW = MolarFlow(h2, "Hydrogen") * lhvKjPerMol;
             var coolingKW = unit.CoolingDuty;
             var electricalKW = unit.Power;
 
-            Console.WriteLine("energy {0}: electrical={1:F3} kW, chemical(LHV)={2:F3} kW, cooling={3:F3} kW, HHV eff={4:P2}",
-                file, electricalKW, chemicalKW, coolingKW, unit.EfficiencyHHV);
+            Console.WriteLine("energy {0}: electrical={1:F3} kW, chemical(LHV)={2:F3} kW, cooling={3:F3} kW, HHV eff={4:P2}, LHV eff={5:P2}",
+                file, electricalKW, chemicalKW, coolingKW, unit.EfficiencyHHV, unit.EfficiencyLHV);
 
-            Check(chemicalKW <= electricalKW * (1.0 + 1e-6),
-                string.Format(CultureInfo.InvariantCulture,
-                    "energy balance: {0}: chemical power {1:F3} kW exceeds electrical input {2:F3} kW",
-                    file, chemicalKW, electricalKW));
+            Check(unit.EfficiencyHHV < 1.0, string.Format(CultureInfo.InvariantCulture,
+                "energy balance: {0}: HHV efficiency {1:P2} is above 100%", file, unit.EfficiencyHHV));
+            Check(unit.EfficiencyLHV < 1.0, string.Format(CultureInfo.InvariantCulture,
+                "energy balance: {0}: LHV efficiency {1:P2} is above 100%", file, unit.EfficiencyLHV));
 
-            // Water splitting at constant T: every kW above the thermoneutral voltage becomes heat,
-            // and the model routes all of it to the coolant.
+            // Heat generated is the part of the electrical input above the thermoneutral power.
             var thermoneutralKW = unit.Current * unit.Parameters["N_cells"].Value * unit.ThermoneutralVoltage / 1000.0;
             var expectedHeatKW = Math.Max(0.0, electricalKW - thermoneutralKW);
             var heatError = Math.Abs(expectedHeatKW - coolingKW) / Math.Max(electricalKW, 1e-12);
@@ -361,6 +378,13 @@ namespace DWSIM.Automation.Dynamics.Tests
                 file, thermoneutralKW, expectedHeatKW, coolingKW, heatError);
             Check(heatError < 0.02, string.Format(CultureInfo.InvariantCulture,
                 "energy balance: {0}: heat removed {1:F3} kW vs heat generated {2:F3} kW", file, coolingKW, expectedHeatKW));
+
+            // Closing the balance: the electrical input splits into LHV chemical energy plus heat.
+            var balanceError = Math.Abs(electricalKW - chemicalKW - coolingKW) / Math.Max(electricalKW, 1e-12);
+            Console.WriteLine("energy {0}: electrical - chemical - heat closes to {1:P2} of input", file, balanceError);
+            Check(balanceError < 0.02, string.Format(CultureInfo.InvariantCulture,
+                "energy balance: {0}: input {1:F3} kW vs chemical {2:F3} + heat {3:F3} kW (gap {4:P2})",
+                file, electricalKW, chemicalKW, coolingKW, balanceError));
         }
 
         private static MaterialStream ConnectedStream(IFlowsheet flowsheet, ElectrolyzerUnitOpBase unit, int index, bool inlet)

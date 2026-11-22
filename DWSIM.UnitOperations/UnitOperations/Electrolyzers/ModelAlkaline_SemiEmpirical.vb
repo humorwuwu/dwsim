@@ -1,9 +1,11 @@
 Namespace UnitOperations
 
     ''' <summary>
-    ''' Semi-empirical alkaline cell voltage model (Tafel activation, ohmic electrolyte,
-    ''' limiting-current concentration). Coefficients are placeholders until the R9
-    ''' conductivity correlation is fitted in T-2.1.
+    ''' Semi-empirical alkaline cell voltage model: Tafel activation, ohmic losses from the
+    ''' electrolyte conductivity (Gambou et al. 2022) plus an area-specific resistance for the
+    ''' electrodes/separator, and a limiting-current concentration term.
+    ''' Coefficients follow industrial 30 wt% KOH, 80 degC stacks: about 1.75 V at 0.4 A/cm2
+    ''' (84% HHV efficiency), rising to 2.1 V at 1 A/cm2.
     ''' </summary>
     Public Class ModelAlkaline_SemiEmpirical
 
@@ -13,15 +15,18 @@ Namespace UnitOperations
 
         Public Property U_tn As Double = 1.48 Implements IElectrochemicalModel.U_tn
 
-        Public Property a_act As Double = 0.20
+        Public Property a_act As Double = 0.30
 
-        Public Property b_act As Double = 0.05
+        Public Property b_act As Double = 0.06
+
+        ''' <summary>Area-specific resistance of electrodes, contacts and separator, in ohm*cm2.</summary>
+        Public Property AreaSpecificResistance As Double = 0.50
 
         Public Property R_ohm_ref As Double = 0.25
 
         Public Property E_act_ohm As Double = 15000.0
 
-        Public Property i_L As Double = 1.0
+        Public Property i_L As Double = 1.2
 
         Public Property T_ref As Double = 353.15
 
@@ -29,8 +34,10 @@ Namespace UnitOperations
 
         Public Property t_mem As Double = 0.05
 
+        ''' <summary>Kept for round-tripping templates saved before AreaSpecificResistance.</summary>
         Public Property rho_electrode As Double = 10.0
 
+        ''' <summary>Kept for round-tripping templates saved before AreaSpecificResistance.</summary>
         Public Property t_electrode As Double = 0.2
 
         Public Property UseKOHConductivity As Boolean = True
@@ -88,7 +95,7 @@ Namespace UnitOperations
 
             If UseKOHConductivity Then
                 Dim sigma = Math.Max(ConductivityKOH(KOH_wt, T), 1.0E-6)
-                bd.U_ohm = i * (t_mem / sigma + (rho_electrode / 1000.0) * t_electrode)
+                bd.U_ohm = i * (t_mem / sigma + AreaSpecificResistance)
             Else
                 bd.U_ohm = i * R_ohm_ref * Math.Exp(E_act_ohm / R * (1.0 / T - 1.0 / T_ref))
             End If
