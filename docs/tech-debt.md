@@ -5,7 +5,7 @@
 - 工程文件里的 `ReleaseLinux|*` / `wine*` PropertyGroup 保留，但已没有 solution 配置触发；`LINUX` 编译符号永远为 false。
 - `SignalMap` 的 OPC UA 用户名/密码以明文存进 flowsheet 的 `ExtraProperties`。共享 flowsheet 前需手动清空密码。
 - `NModbus` / `OPCFoundation.NetStandard.Opc.Ua.Client` 包等到 T-3.4/T-3.5 再加，避免 T-3.2 引入未使用的依赖冲突。
-- 6 个动态样例中 5 个已进入 headless 冒烟；PFR 样例因步长/停留时间不匹配跳过。数值回归基准尚未采集。
+- 6 个动态样例都已进入 headless 冒烟；PFR 样例原先 `CatalystVoidFraction=0` 导致停留时间为 0，已在 2026-11-22 修正样例数据（空隙率 0.4、催化剂装填 1000 kg/m3）。数值回归基准尚未采集。
 - Gate 0 V-3（macOS + Mono）仍未验证。
 - T-1.2 的 ALK 半经验极化系数（`a_act`/`b_act`/`R_ohm_ref`/`E_act_ohm`）和 `crossover_coeff` 仍是待标定值；KOH 电导率已改用 R9/Gambou 2022 Equation 41，并加入 6 点数值回归。PEM 已加入 Bzovsky 2024 Fig. 2 的 18 点 <2% 极化回归、Fig. 6 的 15 点 <3% SEC 回归、4 点热积分解析回归和低载 LEL 趋势测试；ALK 极化/SEC、Dinh 2021 热曲线与 R2 数值曲线仍待补齐。
 - 外部 UO 图形保存的 `<Description>` 为空、`Tag` 不带 UO 前缀，加载时注册表匹配不到，改由保存的输入/输出数量重建通用连接点，UO 的 `LoadData` 再复用；生成器以后应把 `GraphicObject.Description` 写成 UO 描述。
@@ -15,4 +15,4 @@
 - `Microsoft.Bcl.HashCode` 在 Mono/MSBuild 里可能报 MSB3245（引用未解析）；Windows CI 现在会在打包前显式复制 HashCode、System.Buffers 和 System.Memory 到 `DistPackages`。Io 测试宿主也带有这些程序集的 binding redirect。
 - 本地 Mono 构建：`Directory.Build.targets` 为非 Windows 构建提供 netstandard facade 引用和 HintPath 反斜杠归一化；`DWSIM.Controls.PythonConsoleControl` 是 WPF 工程，Mono 无法编译，所以全量本地构建只能做到 Io/Modbus 测试，Dynamics/Automation 仍依赖 CI 产物。
 - T-3.1 的两个 UI 窗体已接线并通过编译；暂停/续跑、单步前进/后退和 6 个动态样例的 UI 行为还没有 Windows 桌面实测，回归基准也未采集。
-- `Dynamic Simulation - PFR.dwxmz` 保存的 1 s 动态步长大于该样例的 PFR 动态停留时间，直接运行会报 `PFR-001`；headless 冒烟跳过该样例。需要用户手工降低步长或修样例。
+- `Dynamic Simulation - PFR.dwxmz` 上游原样保存的 `CatalystVoidFraction=0`、`CatalystLoading=0` 会让停留时间为 0，动态运行必然报 `PFR-001`；该样例数据已在 T-3.1 修正。`RunOptions.StepSeconds` 现在也会传给积分器，调用方可以按需指定更小的步长。
