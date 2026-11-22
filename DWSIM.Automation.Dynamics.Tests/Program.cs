@@ -150,12 +150,9 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             coolingIn.SetTemperature(298.15);
             coolingIn.SetPressure(101325.0);
-            // The coolant has to absorb the stack heat with a realistic rise (about 10 K). The heat
-            // fraction of the electrical input is the same one the KPI check observes:
-            // 27% for the PEM cell voltage and 11.5% for the alkaline one.
-            var heatFraction = unit is AlkalineElectrolyzer ? 0.1152 : 0.2695;
-            var coolantRate = Math.Max(1.0, powerKW * heatFraction * 1000.0 / (4180.0 * 10.0));
-            coolingIn.SetMassFlow(coolantRate);
+            // Placeholder flow for the first solve; it is resized from the model's CoolingDuty
+            // after the flowsheet converges.
+            coolingIn.SetMassFlow(5.0);
             coolingIn.SetOverallComposition(new[] { 1.0, 0.0, 0.0 });
             coolingIn.SetFlashSpec("PT");
             coolingIn.Calculate();
@@ -219,6 +216,16 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             var errors = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
             if (errors.Count > 0) throw new Exception(string.Join("; ", errors.Select(e => e.Message)));
+
+            // Size the coolant from the heat the stack actually rejects (10 K rise), then let the
+            // solver settle the cooling stream again with that flow.
+            var coolantRate = Math.Max(0.1, unit.CoolingDuty * 1000.0 / (4180.0 * 10.0));
+            coolingIn.SetMassFlow(coolantRate);
+            coolingIn.SetFlashSpec("PT");
+            coolingIn.Calculate();
+            var recalculate = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
+            if (recalculate.Count > 0) throw new Exception(string.Join("; ", recalculate.Select(e => e.Message)));
+            Console.WriteLine("coolant sized from {0:F1} kW heat: {1:F2} kg/s", unit.CoolingDuty, coolantRate);
 
             automation.SaveFlowsheet(flowsheet, Path.Combine(directory, fileName), true);
             Console.WriteLine("generated {0}: power={1} kW, H2 purity={2}%", fileName, unit.Power, unit.H2Purity);
