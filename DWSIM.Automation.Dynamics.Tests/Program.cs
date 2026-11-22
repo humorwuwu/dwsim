@@ -87,6 +87,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestElectrochemicalGoldenData();
             TestSpecificEnergyConsumptionGoldenData();
             TestAlkalineConductivityGoldenData();
+            TestAlkalinePolarizationGoldenData();
             TestThermalGoldenData();
             TestGasPurityRegression();
             TestFaradayEfficiency();
@@ -869,6 +870,70 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
 
             Check(rows == 15, "Bzovsky SEC fixture has 15 points");
+        }
+
+        /// <summary>
+        /// Alkaline cell voltage against the industrial 30 wt% KOH / 80 degC envelope, through the
+        /// production model defaults (not a hand-tuned copy of them).
+        /// </summary>
+        private static void TestAlkalinePolarizationGoldenData()
+        {
+            var candidates = new[]
+            {
+                Path.Combine("electrolyzers", "alkaline_polarization_reference.csv"),
+                Path.Combine("tests", "electrolyzers", "alkaline_polarization_reference.csv")
+            };
+            var path = candidates.FirstOrDefault(File.Exists);
+            Check(path != null, "alkaline polarization fixture found");
+            if (path == null) return;
+
+            var electrolyzer = new AlkalineElectrolyzer();
+            var model = (ModelAlkaline_SemiEmpirical)electrolyzer.CreateElectrochemicalModel();
+            model.U_rev = 1.23;
+            model.U_tn = 1.48;
+            model.KOH_wt = electrolyzer.Parameters["KOH_wt"].Value;
+            model.a_act = electrolyzer.Parameters["a_act"].Value;
+            model.b_act = electrolyzer.Parameters["b_act"].Value;
+            model.AreaSpecificResistance = electrolyzer.Parameters["ASR"].Value;
+            model.i_L = electrolyzer.Parameters["i_L"].Value;
+            model.t_mem = electrolyzer.Parameters["t_mem"].Value;
+
+            var rows = 0;
+            var worst = 0.0;
+            foreach (var raw in File.ReadLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("current_density_a_cm2,")) continue;
+
+                var parts = line.Split(',');
+                if (parts.Length != 3)
+                {
+                    Check(false, "invalid alkaline polarization fixture row: " + line);
+                    continue;
+                }
+
+                var currentDensity = double.Parse(parts[0], CultureInfo.InvariantCulture);
+                var expectedVoltage = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                var tolerance = double.Parse(parts[2], CultureInfo.InvariantCulture);
+
+                var actual = model.CellVoltage(currentDensity, 353.15, 16.0, 16.0).U_cell;
+                var relativeError = Math.Abs(actual - expectedVoltage) / expectedVoltage;
+                rows++;
+                worst = Math.Max(worst, relativeError);
+                Check(relativeError <= tolerance,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "alkaline polarization {0:F2} A/cm2: expected {1:F3} V, got {2:F3} V ({3:P2})",
+                        currentDensity, expectedVoltage, actual, relativeError));
+            }
+
+            Check(rows == 6, "alkaline polarization fixture has 6 points");
+            Console.WriteLine("alkaline polarization: {0} points, worst {1:P2}", rows, worst);
+
+            // The cell voltage must stay above the thermoneutral voltage at the design point,
+            // otherwise the stack would report more than 100% efficiency.
+            var design = model.CellVoltage(0.4, 353.15, 16.0, 16.0).U_cell;
+            Check(design > model.U_tn, string.Format(CultureInfo.InvariantCulture,
+                "alkaline design-point voltage {0:F3} V is above the thermoneutral {1:F3} V", design, model.U_tn));
         }
 
         private static void TestThermalGoldenData()

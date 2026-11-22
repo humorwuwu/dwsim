@@ -1,0 +1,15 @@
+# Alkaline polarization reference, 30 wt% KOH, 80 degC, atmospheric pressure.
+# Industrial alkaline water electrolysis cell voltage against current density.
+# Anchor points are the published range for conventional alkaline stacks
+# (1.7-1.8 V at 0.2-0.4 A/cm2, 1.9-2.0 V at 0.6 A/cm2, rising steeply near the
+# limiting current); the Dinh 2021 (DOI 10.1016/j.ijhydene.2021.11.126) 3 MW
+# stack operates in this envelope. Replace these anchors with digitized points
+# from the primary source when available.
+# Columns: current_density_a_cm2,cell_voltage_v,relative_tolerance
+current_density_a_cm2,cell_voltage_v,relative_tolerance
+0.10,1.53,0.06
+0.20,1.64,0.05
+0.30,1.70,0.05
+0.40,1.78,0.04
+0.50,1.85,0.04
+0.60,1.92,0.04
