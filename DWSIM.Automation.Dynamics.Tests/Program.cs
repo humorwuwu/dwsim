@@ -171,19 +171,23 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             var purification = new H2Purification();
             var storage = new HydrogenStorage();
-            var purifiedH2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 650, 30, "H2-PURE");
-            var offGas = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 650, 130, "OFFGAS");
-            var storedH2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 850, 30, "H2-PROD");
+            var purifiedH2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 600, 30, "H2-PURE");
+            var offGas = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 520, 130, "OFFGAS");
+            var compressedH2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 900, 30, "H2-HP");
+            var storedH2 = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 1000, 30, "H2-PROD");
 
-            baseFlowsheet.AddObjectToSurface(ObjectType.External, 520, 20, "PUR-1", "", purification, false);
+            baseFlowsheet.AddObjectToSurface(ObjectType.External, 500, 20, "PUR-1", "", purification, false);
             purification.CreateConnectors();
-            baseFlowsheet.AddObjectToSurface(ObjectType.External, 730, 20, "STO-1", "", storage, false);
+            baseFlowsheet.AddObjectToSurface(ObjectType.External, 950, 20, "STO-1", "", storage, false);
             storage.CreateConnectors();
 
             flowsheet.ConnectObjects(h2.GraphicObject, purification.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(purification.GraphicObject, purifiedH2.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(purification.GraphicObject, offGas.GraphicObject, 1, 0);
-            flowsheet.ConnectObjects(purifiedH2.GraphicObject, storage.GraphicObject, 0, 0);
+
+            // Two-stage compression with interstage cooling and knock-out, 30 -> 90 -> 250 bar.
+            AddCompressionTrain(flowsheet, baseFlowsheet, purifiedH2, compressedH2);
+            flowsheet.ConnectObjects(compressedH2.GraphicObject, storage.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(storage.GraphicObject, storedH2.GraphicObject, 0, 0);
 
             var dynamicsManager = flowsheet.DynamicsManager;
@@ -210,6 +214,51 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             automation.SaveFlowsheet(flowsheet, Path.Combine(directory, fileName), true);
             Console.WriteLine("generated {0}: power={1} kW, H2 purity={2}%", fileName, unit.Power, unit.H2Purity);
+        }
+
+        /// <summary>
+        /// Adds the compression train between the purified hydrogen and the storage inlet:
+        /// stage 1 (30 -> 90 bar), interstage cooler to 40 degC, knock-out vessel, stage 2
+        /// (90 -> 250 bar). Each stage has its own energy stream.
+        /// </summary>
+        private static void AddCompressionTrain(IFlowsheet flowsheet, DWSIM.FlowsheetBase.FlowsheetBase baseFlowsheet,
+                                                MaterialStream feed, MaterialStream product)
+        {
+            var stage1Out = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 700, 30, "H2-90BAR");
+            var stage1Power = (EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 700, 90, "W-C1");
+            var afterCooler = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 760, 30, "H2-90BAR-C");
+            var knockOutGas = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 820, 30, "H2-90BAR-DRY");
+            var knockOutLiquid = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 820, 90, "H2-KO-COND");
+            var stage2Power = (EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 900, 90, "W-C2");
+
+            var stage1 = (Compressor)flowsheet.AddObject(ObjectType.Compressor, 650, 30, "C-1");
+            stage1.CalcMode = Compressor.CalculationMode.OutletPressure;
+            stage1.POut = 90.0 * 100000.0;
+            stage1.AdiabaticEfficiency = 75.0;
+
+            var cooler = (Cooler)flowsheet.AddObject(ObjectType.Cooler, 730, 30, "E-1");
+            cooler.CalcMode = Cooler.CalculationMode.OutletTemperature;
+            cooler.OutletTemperature = 313.15;
+            cooler.DeltaP = 0.0;
+
+            var knockOut = (Vessel)flowsheet.AddObject(ObjectType.Vessel, 790, 30, "KO-1");
+
+            var stage2 = (Compressor)flowsheet.AddObject(ObjectType.Compressor, 870, 30, "C-2");
+            stage2.CalcMode = Compressor.CalculationMode.OutletPressure;
+            stage2.POut = 250.0 * 100000.0;
+            stage2.AdiabaticEfficiency = 75.0;
+
+            flowsheet.ConnectObjects(feed.GraphicObject, stage1.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(stage1Power.GraphicObject, stage1.GraphicObject, 0, 1);
+            flowsheet.ConnectObjects(stage1.GraphicObject, stage1Out.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(stage1Out.GraphicObject, cooler.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(cooler.GraphicObject, afterCooler.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(afterCooler.GraphicObject, knockOut.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(knockOut.GraphicObject, knockOutGas.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(knockOut.GraphicObject, knockOutLiquid.GraphicObject, 1, 0);
+            flowsheet.ConnectObjects(knockOutGas.GraphicObject, stage2.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(stage2Power.GraphicObject, stage2.GraphicObject, 0, 1);
+            flowsheet.ConnectObjects(stage2.GraphicObject, product.GraphicObject, 0, 0);
         }
 
         private static void TestPlantSamples()
