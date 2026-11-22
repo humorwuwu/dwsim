@@ -894,6 +894,22 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
             Check(rejectedOverload, "unreachable stack power is rejected");
 
+            // The low end is an operating limit too: a target below the turndown limit must be
+            // reported, not silently clamped to the minimum.
+            var rejectedUnderload = false;
+            try
+            {
+                calculator.CurrentForPower(calculator.PowerAt(calculator.i_min) * 0.5);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                rejectedUnderload = true;
+            }
+            Check(rejectedUnderload, "a power below the stack minimum is rejected");
+
+            var atMinimum = calculator.CurrentForPower(calculator.PowerAt(calculator.i_min));
+            Check(Math.Abs(atMinimum - calculator.i_min) < 1e-6, "the minimum power maps to the minimum current density");
+
             var alkaline = new AlkalineElectrolyzer();
             Check(alkaline.CreateElectrochemicalModel() is ModelAlkaline_SemiEmpirical, "alkaline model factory");
 

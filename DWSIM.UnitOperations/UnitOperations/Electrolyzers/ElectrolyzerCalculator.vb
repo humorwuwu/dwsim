@@ -30,6 +30,16 @@ Namespace UnitOperations
             Dim minimumPower = PowerAt(i_min)
             Dim maximumPower = PowerAt(i_max)
 
+            ' Both ends are operating limits the caller has to know about: silently clamping to
+            ' the minimum hides a stack running below its turndown limit, which is a real event
+            ' (the interlocks and the PLC both care about it).
+            If powerKW < minimumPower AndAlso i_min > 0.0 Then
+                Throw New ArgumentOutOfRangeException(
+                    NameOf(powerKW),
+                    String.Format(Globalization.CultureInfo.InvariantCulture,
+                                  "Target power {0:F3} kW is below this stack's minimum of {1:F3} kW.",
+                                  powerKW, minimumPower))
+            End If
             If powerKW <= minimumPower Then Return i_min
             If powerKW > maximumPower Then
                 Throw New ArgumentOutOfRangeException(
