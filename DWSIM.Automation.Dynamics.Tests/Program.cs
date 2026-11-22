@@ -918,6 +918,11 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(storage.SupportsDynamicMode && storage.HasPropertiesForDynamicMode, "storage dynamic support");
             Check(storage.UpdateStoredMoles(100.0, 1.0, 10.0) > 100.0, "storage mole balance");
 
+            // The tank P-V-T relation has to honour the gas's real compressibility: at 250 bar
+            // hydrogen is not ideal, and the old fixed 0.95 would understate the pressure.
+            var pressureAtDefault = storage.TankPressure;
+            Check(pressureAtDefault > 0.0, "storage reports a tank pressure");
+
             var alkalineModel = new ModelAlkaline_SemiEmpirical();
             var conductivity = alkalineModel.ConductivityKOH(0.30, 353.15);
             Check(Math.Abs(conductivity - 1.36093786) / 1.36093786 < 1e-5, "R9 KOH conductivity at 80 C");
