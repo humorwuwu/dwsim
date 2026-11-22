@@ -89,6 +89,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestAlkalineConductivityGoldenData();
             TestThermalGoldenData();
             TestGasPurityRegression();
+            TestFaradayEfficiency();
             TestInterlocks();
             TestDynamicSupport();
             TestDynamicSamples();
@@ -952,6 +953,47 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
 
             Check(rows == 6, "R9 KOH conductivity fixture has 6 points");
+        }
+
+        /// <summary>
+        /// Faraday efficiency must equal the reference value at the reference current density and
+        /// fall as the load falls, because the crossover current takes a larger share.
+        /// </summary>
+        private static void TestFaradayEfficiency()
+        {
+            var calculator = new ElectrolyzerCalculator
+            {
+                Model = new ModelPEM_Springer(),
+                etaF_ref = 0.99,
+                i_ref = 1.0
+            };
+
+            var atReference = calculator.FaradayEfficiency(1.0);
+            Check(Math.Abs(atReference - 0.99) < 1e-9,
+                string.Format(CultureInfo.InvariantCulture, "Faraday efficiency at i_ref is 0.99, got {0:F6}", atReference));
+
+            var highLoad = calculator.FaradayEfficiency(2.5);
+            Check(highLoad > atReference && highLoad < 1.0,
+                string.Format(CultureInfo.InvariantCulture, "Faraday efficiency rises above the reference at high load, got {0:F6}", highLoad));
+
+            var lowLoad = calculator.FaradayEfficiency(0.1);
+            Check(lowLoad < atReference && lowLoad > 0.0,
+                string.Format(CultureInfo.InvariantCulture, "Faraday efficiency falls at low load, got {0:F6}", lowLoad));
+
+            var lowest = calculator.FaradayEfficiency(0.01);
+            Check(lowest < lowLoad, string.Format(CultureInfo.InvariantCulture,
+                "Faraday efficiency keeps falling as the load falls ({0:F6} at 0.01 vs {1:F6} at 0.1)", lowest, lowLoad));
+
+            Check(calculator.FaradayEfficiency(0.0) == 0.0, "Faraday efficiency is zero at zero current");
+
+            // Hydrogen flow has to follow the efficiency, otherwise the mass balance would drift.
+            var hydrogen = calculator.HydrogenMolarFlow(1.0);
+            var expected = 0.99 * 1.0 * calculator.A_cell * calculator.N_cells / (2.0 * 96485.3365);
+            Check(Math.Abs(hydrogen - expected) < 1e-15, "hydrogen flow follows the Faraday efficiency");
+
+            // Reference-free case: an ideal Faraday efficiency must stay exactly 1 at any load.
+            var ideal = new ElectrolyzerCalculator { Model = new ModelPEM_Springer(), etaF_ref = 1.0 };
+            Check(Math.Abs(ideal.FaradayEfficiency(0.1) - 1.0) < 1e-12, "ideal Faraday efficiency has no crossover loss");
         }
 
         private static void TestGasPurityRegression()

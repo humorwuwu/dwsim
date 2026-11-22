@@ -55,15 +55,24 @@ Namespace UnitOperations
         End Function
 
         ''' <summary>
-        ''' Faraday efficiency at the configured reference value. Low-load gas crossover
-        ''' is accounted for separately by the electrolyzer KPI calculation.
+        ''' Faraday efficiency (fraction of the current that splits water). Gas crossover consumes
+        ''' current, so the efficiency falls as the load falls: at the reference current density the
+        ''' efficiency equals <see cref="etaF_ref"/>, and below it the crossover current becomes a
+        ''' larger share of the total current.
         ''' </summary>
         Public Function FaradayEfficiency(i As Double) As Double
 
             If i <= 0.0 Then Return 0.0
-            Return etaF_ref
+
+            ' The crossover current that reproduces etaF_ref at i_ref, i_cross = (1/etaF_ref - 1) * i_ref.
+            Dim crossoverCurrent As Double = Math.Max(0.0, 1.0 / etaF_ref - 1.0) * Math.Max(i_ref, 1.0E-9)
+
+            Return Math.Max(0.0, Math.Min(1.0, i / (i + crossoverCurrent)))
 
         End Function
+
+        ''' <summary>Current density at which <see cref="FaradayEfficiency"/> equals etaF_ref.</summary>
+        Public Property i_ref As Double = 1.0
 
         ''' <summary>Hydrogen molar flow (mol/s).</summary>
         Public Function HydrogenMolarFlow(i As Double) As Double

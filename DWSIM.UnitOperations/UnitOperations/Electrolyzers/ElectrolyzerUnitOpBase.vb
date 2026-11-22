@@ -117,6 +117,7 @@ Namespace UnitOperations
             AddParameter("P_an", "Anode pressure", 1.0, "bar")
             AddParameter("T_op", "Operating temperature", 353.15, "K")
             AddParameter("etaF_ref", "Reference Faraday efficiency", 0.99, "")
+            AddParameter("i_ref", "Current density at the reference Faraday efficiency", 1.0, "A/cm2")
             AddParameter("SetpointMode", "0 = power input, 1 = current input", 0.0, "")
             AddParameter("P_stack", "Stack power input", 0.0, "kW")
             AddParameter("I_stack", "Stack current input", 0.0, "A")
@@ -469,7 +470,8 @@ Namespace UnitOperations
                 .T = T,
                 .pCat = pCat,
                 .pAn = pAn,
-                .etaF_ref = ParameterValue("etaF_ref", 0.99)
+                .etaF_ref = ParameterValue("etaF_ref", 0.99),
+                .i_ref = ParameterValue("i_ref", 1.0)
             }
 
             Dim mode = CInt(ParameterValue("SetpointMode", 0.0))
