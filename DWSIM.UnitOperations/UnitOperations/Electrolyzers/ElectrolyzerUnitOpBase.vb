@@ -570,18 +570,29 @@ Namespace UnitOperations
             Dim NtotH2 = Nf(hidx) / Math.Max(xH2, 1.0E-12)
             Dim NH2Osat = NtotH2 - Nf(hidx)
 
+            ' The crossover impurity reported by the KPIs (and used by the interlocks) has to appear
+            ' in the streams too, otherwise the composition and the purity disagree. It is a swap:
+            ' H2 crosses to the oxygen side and O2 to the hydrogen side, so both totals stay balanced.
+            Dim crossflow = calculator.CrossoverMolarFlow(currentDensityValue, ParameterValue("crossover_coeff", 0.0))
+            Dim nH2Net = Math.Max(0.0, Nf(hidx) - crossflow)
+            Dim o2Net = Math.Max(0.0, o2Produced - crossflow)
+
             msout1.Clear()
             msout1.ClearAllProps()
-            msout1.SetOverallCompoundMolarFlow(hid, Nf(hidx))
+            msout1.SetOverallCompoundMolarFlow(hid, nH2Net)
             msout1.SetOverallCompoundMolarFlow(wid, NH2Osat)
+            If crossflow > 0.0 AndAlso oidx >= 0 AndAlso nH2Net + NH2Osat > 0.0 Then
+                msout1.SetOverallCompoundMolarFlow("Oxygen", crossflow)
+            End If
             msout1.SetPressure(pCatPa)
             msout1.SetTemperature(T)
             msout1.SetFlashSpec("PT")
             msout1.Calculate()
 
-            Nf(hidx) = 0.0
+            Nf(hidx) = crossflow
             Nf(widx) -= NH2Osat
             If Nf(widx) < 0.0 Then Throw New Exception("Negative water molar flow. Increase water rate.")
+            Nf(oidx) = o2Net
 
             msout2.Clear()
             msout2.ClearAllProps()

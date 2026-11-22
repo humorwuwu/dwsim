@@ -420,6 +420,21 @@ namespace DWSIM.Automation.Dynamics.Tests
                         Check(Math.Abs(unit.Current - unit.CurrentDensity * unit.Parameters["A_cell"].Value) < 1e-6,
                             "plant stack current uses series-cell current: " + Path.GetFileName(file));
 
+                        // The reported purity must agree with what the streams actually contain.
+                        var h2Stream = ConnectedStream(flowsheet, unit, 0, false);
+                        Check(h2Stream != null, "cathode stream connected: " + Path.GetFileName(file));
+                        if (h2Stream != null)
+                        {
+                            var cathodeTotal = h2Stream.Phases[0].Compounds.Values.Sum(c => c.MolarFlow.GetValueOrDefault());
+                            var reportedO2inH2 = Convert.ToDouble(unit.GetPropertyValue("O2 in H2"));
+                            var streamO2inH2 = 100.0 * MolarFlow(h2Stream, "Oxygen") / Math.Max(cathodeTotal, 1e-12);
+                            Console.WriteLine("purity {0}: stream O2-in-H2={1:E3}%, KPI={2:E3}%",
+                                Path.GetFileName(file), streamO2inH2, reportedO2inH2);
+                            Check(Math.Abs(streamO2inH2 - reportedO2inH2) < 1e-3 * Math.Max(1.0, reportedO2inH2) + 1e-9,
+                                string.Format(CultureInfo.InvariantCulture,
+                                    "stream O2-in-H2 {0:E3} % matches the reported KPI {1:E3} %", streamO2inH2, reportedO2inH2));
+                        }
+
                         CheckComponentBalance(flowsheet, unit, Path.GetFileName(file));
                         CheckEnergyBalance(flowsheet, unit, Path.GetFileName(file));
                     }
