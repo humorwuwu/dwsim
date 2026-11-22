@@ -603,6 +603,18 @@ Namespace UnitOperations
             msout2.SetFlashSpec("PT")
             msout2.Calculate()
 
+            ' Report the impurities from the streams themselves, so the KPI and the composition a
+            ' user reads can never disagree (the cathode also carries saturated water vapour).
+            Dim cathodeTotal = msout1.Phases(0).Compounds.Values.Sum(Function(c) c.MolarFlow.GetValueOrDefault())
+            Dim anodeTotal = msout2.Phases(0).Compounds.Values.Sum(Function(c) c.MolarFlow.GetValueOrDefault())
+            If cathodeTotal > 0.0 Then
+                O2inH2 = 100.0 * msout1.Phases(0).Compounds("Oxygen").MolarFlow.GetValueOrDefault() / cathodeTotal
+                H2Purity = 100.0 - O2inH2
+            End If
+            If anodeTotal > 0.0 Then
+                H2inO2 = 100.0 * msout2.Phases(0).Compounds(hid).MolarFlow.GetValueOrDefault() / anodeTotal
+            End If
+
             Dim wasteHeatKW = CoolingDuty
             Dim coolingIn = GetInletMaterialStream(1)
             Dim coolingOut = GetOutletMaterialStream(2)

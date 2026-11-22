@@ -106,15 +106,20 @@ Namespace UnitOperations
         ''' <summary>Activation energy of hydrogen permeation through the membrane, J/mol.</summary>
         Public Property E_perm As Double = 20000.0
 
-        ''' <summary>Calculates both gas stream impurity concentrations in volume percent.</summary>
+        ''' <summary>
+        ''' Calculates both gas stream impurity concentrations in volume percent. The cathode also
+        ''' carries saturated water vapour, so the denominator is the dry-gas-plus-impurity total
+        ''' the stream actually contains; <paramref name="waterVapour"/> supplies that amount.
+        ''' </summary>
         Public Sub GasPurity(i As Double, crossoverCoeff As Double,
-                             ByRef h2inO2 As Double, ByRef o2inH2 As Double)
+                             ByRef h2inO2 As Double, ByRef o2inH2 As Double,
+                             Optional waterVapour As Double = 0.0)
 
             Dim nH2 = HydrogenMolarFlow(i)
             Dim nO2 = nH2 / 2.0
             Dim crossover = CrossoverMolarFlow(i, crossoverCoeff)
             h2inO2 = 100.0 * crossover / Math.Max(nO2 + crossover, 1.0E-12)
-            o2inH2 = 100.0 * crossover / Math.Max(nH2 + crossover, 1.0E-12)
+            o2inH2 = 100.0 * crossover / Math.Max(nH2 + crossover + Math.Max(waterVapour, 0.0), 1.0E-12)
 
         End Sub
 
