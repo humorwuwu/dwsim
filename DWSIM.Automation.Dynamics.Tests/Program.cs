@@ -225,11 +225,11 @@ namespace DWSIM.Automation.Dynamics.Tests
                                                 MaterialStream feed, MaterialStream product)
         {
             var stage1Out = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 700, 30, "H2-90BAR");
-            var stage1Power = (EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 700, 90, "W-C1");
+            var stage1Power = (DWSIM.UnitOperations.Streams.EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 700, 90, "W-C1");
             var afterCooler = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 760, 30, "H2-90BAR-C");
             var knockOutGas = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 820, 30, "H2-90BAR-DRY");
             var knockOutLiquid = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 820, 90, "H2-KO-COND");
-            var stage2Power = (EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 900, 90, "W-C2");
+            var stage2Power = (DWSIM.UnitOperations.Streams.EnergyStream)flowsheet.AddObject(ObjectType.EnergyStream, 900, 90, "W-C2");
 
             var stage1 = (Compressor)flowsheet.AddObject(ObjectType.Compressor, 650, 30, "C-1");
             stage1.CalcMode = Compressor.CalculationMode.OutletPressure;
