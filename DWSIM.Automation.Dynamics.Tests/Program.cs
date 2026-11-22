@@ -89,6 +89,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestAlkalineConductivityGoldenData();
             TestAlkalinePolarizationGoldenData();
             TestThermalGoldenData();
+            TestStackHeatLossShare();
             TestGasPurityRegression();
             TestFaradayEfficiency();
             TestInterlocks();
@@ -1123,6 +1124,27 @@ namespace DWSIM.Automation.Dynamics.Tests
             }
 
             Check(rows == 4, "thermal fixture has 4 points");
+        }
+
+        /// <summary>
+        /// Dinh et al. (2021), DOI 10.1016/j.ijhydene.2021.11.126: in an industrial alkaline
+        /// stack the heat lost to the surroundings is about 2.6% of the total heat removal, so
+        /// the coolant must carry the rest. This checks the defaults honour that split.
+        /// </summary>
+        private static void TestStackHeatLossShare()
+        {
+            var alkaline = new AlkalineElectrolyzer();
+            const double installedKW = 2950.0;
+            var ambientKW = alkaline.Parameters["U_loss_area"].Value * (353.15 - 298.15) / 1000.0;
+            var heatGeneratedKW = installedKW * 0.1152;
+            var ambientShare = ambientKW / (ambientKW + heatGeneratedKW);
+
+            Console.WriteLine("stack heat loss: ambient={0:F2} kW, generated={1:F1} kW, ambient share={2:P2}",
+                ambientKW, heatGeneratedKW, ambientShare);
+
+            Check(ambientShare < 0.05, string.Format(CultureInfo.InvariantCulture,
+                "ambient heat loss stays a small share of the total ({0:P2}, Dinh 2021 reports 2.6%)", ambientShare));
+            Check(ambientShare > 0.0, "the stack does lose some heat to the surroundings");
         }
 
         private static void TestAlkalineConductivityGoldenData()
