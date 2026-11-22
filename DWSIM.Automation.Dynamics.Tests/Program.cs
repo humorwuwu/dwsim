@@ -30,7 +30,21 @@ namespace DWSIM.Automation.Dynamics.Tests
                 ? args[0]
                 : Path.GetFullPath(Path.Combine("PlatformFiles", "Common", "samples", "Dynamic Simulation - Water Tank Level Control.dwxmz"));
             var shadowReport = args.FirstOrDefault(a => a.StartsWith("--shadow-report=", StringComparison.Ordinal));
-            if (shadowReport != null) shadowReport = shadowReport.Substring("--shadow-report=".Length);
+            if (shadowReport != null)
+            {
+                shadowReport = shadowReport.Substring("--shadow-report=".Length);
+            }
+            else
+            {
+                for (var i = 0; i < args.Length - 1; i++)
+                {
+                    if (args[i] == "--shadow-report")
+                    {
+                        shadowReport = args[i + 1];
+                        break;
+                    }
+                }
+            }
 
             Console.WriteLine("Loading " + path);
 

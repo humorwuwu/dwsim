@@ -162,7 +162,7 @@ jobs:
         with:
           name: h2sim-shadow-deviation
           path: DistPackages/Windows/shadow-report/*.csv
-          if-no-files-found: warn
+          if-no-files-found: error
 
   openplc-compiler:
     runs-on: ubuntu-22.04
