@@ -1,0 +1,12 @@
+# Dynamic sample numerical baseline: total stream enthalpy (kW) after a 10 s
+# headless run of each sample, as computed by DWSIM.Automation.Dynamics.Tests.
+# Recorded from CI run 44990929832 (2026-11-22, Windows x64 Release).
+# Regenerate with H2SIM_WRITE_BASELINE=1 and replace this file when a model
+# change intentionally moves the reference.
+# Columns: sample,variable,value,relative_tolerance
+Dynamic Simulation - CSTR.dwxmz,total_stream_enthalpy_kw,-157381.3403689093,1e-6
+Dynamic Simulation - Heat Exchanger.dwxmz,total_stream_enthalpy_kw,-1012.0148556632705,1e-6
+Dynamic Simulation - PFR.dwxmz,total_stream_enthalpy_kw,-1786.9197193456673,1e-6
+Dynamic Simulation - Separator Pressure and Level Control.dwxmz,total_stream_enthalpy_kw,-550.61064205033347,1e-6
+Dynamic Simulation - Water Tank Level Control.dwxmz,total_stream_enthalpy_kw,2099.2956781623429,1e-6
+Dynamic Simulation - Water Tank Level with Custom Controller.dwxmz,total_stream_enthalpy_kw,4202.6219178386327,1e-6
