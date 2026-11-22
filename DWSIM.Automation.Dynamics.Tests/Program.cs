@@ -220,6 +220,11 @@ namespace DWSIM.Automation.Dynamics.Tests
             var errors = ((global::DWSIM.Automation.AutomationInterface)automation).CalculateFlowsheet2(flowsheet);
             if (errors.Count > 0) throw new Exception(string.Join("; ", errors.Select(e => e.Message)));
 
+            Console.WriteLine("before save: schedules={0}, integrators={1}, current={2}",
+                flowsheet.DynamicsManager.ScheduleList.Count,
+                flowsheet.DynamicsManager.IntegratorList.Count,
+                flowsheet.DynamicsManager.CurrentSchedule);
+
             automation.SaveFlowsheet(flowsheet, Path.Combine(directory, fileName), true);
             Console.WriteLine("generated {0}: power={1} kW, H2 purity={2}%", fileName, unit.Power, unit.H2Purity);
         }
