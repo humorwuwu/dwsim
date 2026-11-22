@@ -397,11 +397,11 @@ Namespace UnitOperations
                     oms.SetPressure(Pressure - DeltaP)
 
                     If CalcMode = CalculationMode.OutletVaporFraction AndAlso m_VFout.HasValue Then
-                        oms.SetVaporFraction(m_VFout.Value)
-                        oms.SetFlashSpec("PV")
+                        oms.Phases(2).Properties.molarfraction = m_VFout.Value
+                        oms.SetFlashSpec("pvf")
                     Else
                         oms.SetTemperature(target)
-                        oms.SetFlashSpec("PT")
+                        oms.SetFlashSpec("pt")
                     End If
                     oms.Calculate()
 
