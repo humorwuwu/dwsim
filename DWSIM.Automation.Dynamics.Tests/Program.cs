@@ -94,6 +94,9 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestDynamicSamples();
             TestPlantSamples();
 
+            if (Environment.GetEnvironmentVariable("H2SIM_INTERLOCK_TEST") == "1")
+                TestInterlockThroughBridge(shadowReport);
+
             Console.WriteLine(_failures == 0 ? "PASS" : "FAIL");
             return _failures == 0 ? 0 : 1;
         }
@@ -336,6 +339,170 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             var cooled = pem.IntegrateStackTemperature(353.15, 60.0, 0.0, 1.0, 4180.0, 298.15, 298.15);
             Check(cooled < 353.15 && cooled > 298.15, "stack cools down");
+        }
+
+        /// <summary>
+        /// V-5.1.8: a model-side interlock trips while the PLC is in control. The trip must cut
+        /// power even though the internal controllers no longer write, and the PLC must see it.
+        /// </summary>
+        private static void TestInterlockThroughBridge(string reportDirectory)
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "h2sim-interlock-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                GeneratePlant(directory, "interlock.dwxmz", new PEMElectrolyzer(), 900.0, 30.0, 2.0);
+
+                var automation = new global::DWSIM.Automation.Automation3();
+                var flowsheet = automation.LoadFlowsheet(Path.Combine(directory, "interlock.dwxmz"));
+                var unit = flowsheet.SimulationObjects.Values.OfType<ElectrolyzerUnitOpBase>().FirstOrDefault();
+                Check(unit != null, "interlock: plant electrolyzer");
+                if (unit == null) return;
+
+                var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
+                var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
+
+                var probe = new TcpListener(IPAddress.Loopback, 0);
+                probe.Start();
+                var port = ((IPEndPoint)probe.LocalEndpoint).Port;
+                probe.Stop();
+
+                var map = new SignalMap();
+                map.Connections.Add(new ConnectionConfig
+                {
+                    Name = "Interlock",
+                    Protocol = BridgeProtocol.ModbusTcpServer,
+                    Host = "127.0.0.1",
+                    Port = port,
+                    UnitId = 1,
+                    Enabled = true
+                });
+                map.Signals.Add(new Signal
+                {
+                    Id = "TRIP",
+                    Direction = SignalDirection.ToPlc,
+                    ObjectTag = unit.GraphicObject.Tag,
+                    Property = "Trip Latched",
+                    Unit = "",
+                    Type = SignalDataType.Bool,
+                    ModbusArea = ModbusArea.Coil,
+                    ModbusAddress = 1,
+                    ConnectionName = "Interlock"
+                });
+                map.Signals.Add(new Signal
+                {
+                    Id = "POWER",
+                    Direction = SignalDirection.ToPlc,
+                    ObjectTag = unit.GraphicObject.Tag,
+                    Property = "Power",
+                    Unit = "kW",
+                    Type = SignalDataType.Int16,
+                    Scale = 1.0,
+                    ModbusArea = ModbusArea.InputRegister,
+                    ModbusAddress = 0,
+                    ConnectionName = "Interlock"
+                });
+                map.Signals.Add(new Signal
+                {
+                    Id = "H2INO2",
+                    Direction = SignalDirection.ToPlc,
+                    ObjectTag = unit.GraphicObject.Tag,
+                    Property = "H2 in O2",
+                    Unit = "",
+                    Type = SignalDataType.Int16,
+                    Scale = 100.0,
+                    ModbusArea = ModbusArea.InputRegister,
+                    ModbusAddress = 1,
+                    ConnectionName = "Interlock"
+                });
+
+                using (var bridge = new ModbusTcpServerBridge())
+                {
+                    Check(bridge.Connect(map, flowsheet), "interlock: bridge connects: " + bridge.Status.Message);
+                    if (!bridge.Status.Connected) return;
+
+                    IModbusMaster master = null;
+                    TcpClient client = null;
+                    var samples = new List<string>();
+                    try
+                    {
+                        Thread.Sleep(200);
+                        client = new TcpClient("127.0.0.1", port);
+                        master = new ModbusFactory().CreateMaster(client);
+
+                        var running = DynamicsRunner.Run(flowsheet, new RunOptions
+                        {
+                            DurationSeconds = 10,
+                            StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                            ReuseInitialState = true,
+                            InitialStateId = schedule.InitialFlowsheetStateID
+                        }, new BridgeDynamicsHost(bridge));
+
+                        Check(running.Error == null, "interlock: normal run without errors: " + running.Error);
+                        var powerBefore = (double)unit.GetPropertyValue("Power");
+                        var tripBefore = master.ReadCoils(1, 1, 1)[0];
+                        Check(powerBefore > 1.0, "interlock: electrolyzer produces power before the trip: " + powerBefore);
+                        Check(!tripBefore, "interlock: no trip before the excursion");
+                        samples.Add(string.Format(CultureInfo.InvariantCulture, "before,power_kw={0:F3},trip={1}", powerBefore, tripBefore));
+
+                        // Drive H2-in-O2 above the 4 vol% explosive limit, then recalculate the model.
+                        unit.H2inO2 = 4.5;
+                        unit.UpdateInterlocks(4.5, 0.1, 353.15, 0.0, 100.0);
+                        Check(unit.TripLatched, "interlock: trip latches above 4 vol%");
+                        unit.Calculate();
+
+                        var after = DynamicsRunner.Run(flowsheet, new RunOptions
+                        {
+                            DurationSeconds = 5,
+                            StepSeconds = integrator.IntegrationStep.TotalSeconds,
+                            ReuseInitialState = true,
+                            InitialStateId = schedule.InitialFlowsheetStateID
+                        }, new BridgeDynamicsHost(bridge));
+
+                        Check(after.Error == null, "interlock: post-trip run without errors: " + after.Error);
+                        if (after.Error != null)
+                        {
+                            Console.Error.WriteLine(after.Error);
+                        }
+                        var powerAfter = master.ReadInputRegisters(1, 0, 1)[0];
+                        var h2inO2 = master.ReadInputRegisters(1, 1, 1)[0];
+                        var tripAfter = master.ReadCoils(1, 1, 1)[0];
+
+                        Check((double)unit.GetPropertyValue("Power") == 0.0,
+                            "interlock: model power is zero after the trip");
+                        Check(powerAfter == 0, "interlock: PLC reads zero power after the trip: " + powerAfter);
+                        Check(h2inO2 == 450, "interlock: PLC reads the H2-in-O2 excursion: " + h2inO2);
+                        Check(tripAfter, "interlock: PLC reads the latched trip bit");
+                        samples.Add(string.Format(CultureInfo.InvariantCulture, "after,power_kw_raw={0},h2ino2_raw={1},trip={2}", powerAfter, h2inO2, tripAfter));
+
+                        // The trip must stay latched until an explicit reset even when the cause clears.
+                        unit.UpdateInterlocks(0.5, 0.1, 353.15, 0.0, 100.0);
+                        Check(unit.TripLatched, "interlock: trip stays latched after the cause clears");
+                        Check(unit.ResetTrip(), "interlock: reset accepted when safe");
+                        Check(!unit.TripLatched, "interlock: trip cleared after reset");
+                        samples.Add("reset,trip=False");
+
+                        if (reportDirectory != null)
+                        {
+                            Directory.CreateDirectory(reportDirectory);
+                            File.WriteAllLines(Path.Combine(reportDirectory, "v5.1.8-interlock-bridge.csv"), samples);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Check(false, "interlock: exception " + ex);
+                    }
+                    finally
+                    {
+                        client?.Close();
+                        bridge.Disconnect();
+                    }
+                }
+            }
+            finally
+            {
+                try { Directory.Delete(directory, true); } catch { }
+            }
         }
 
         private static void TestInterlocks()

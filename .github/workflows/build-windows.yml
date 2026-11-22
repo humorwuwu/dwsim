@@ -107,6 +107,7 @@ jobs:
         shell: pwsh
         env:
           H2SIM_OPCUA_TEST: "1"
+          H2SIM_INTERLOCK_TEST: "1"
         run: |
           pip install asyncua
           $log = Join-Path $env:TEMP "h2sim-opcua.log"
