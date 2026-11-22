@@ -249,6 +249,9 @@ namespace DWSIM.Automation.Dynamics.Tests
                             " " + unit.Power + " kW vs " + targetPower + " kW");
                         Check(Math.Abs(unit.Current - unit.CurrentDensity * unit.Parameters["A_cell"].Value) < 1e-6,
                             "plant stack current uses series-cell current: " + Path.GetFileName(file));
+
+                        CheckComponentBalance(flowsheet, unit, Path.GetFileName(file));
+                        CheckEnergyBalance(flowsheet, unit, Path.GetFileName(file));
                     }
 
                     var storage = flowsheet.SimulationObjects.Values.OfType<HydrogenStorage>().FirstOrDefault();
@@ -275,6 +278,104 @@ namespace DWSIM.Automation.Dynamics.Tests
                     Check(false, "plant sample: " + Path.GetFileName(file) + ": " + ex.ToString());
                 }
             }
+        }
+
+        /// <summary>
+        /// Per-compound molar balance around the electrolyzer: feed plus the water split into
+        /// H2 and O2 must equal what leaves in the two gas outlets.
+        /// </summary>
+        private static void CheckComponentBalance(IFlowsheet flowsheet, ElectrolyzerUnitOpBase unit, string file)
+        {
+            var feed = ConnectedStream(flowsheet, unit, 0, true);
+            var coolingIn = ConnectedStream(flowsheet, unit, 1, true);
+            var h2 = ConnectedStream(flowsheet, unit, 0, false);
+            var o2 = ConnectedStream(flowsheet, unit, 1, false);
+            var coolingOut = ConnectedStream(flowsheet, unit, 2, false);
+            Check(feed != null && h2 != null && o2 != null, "mass balance: streams connected: " + file);
+            if (feed == null || h2 == null || o2 == null) return;
+
+            var compounds = feed.Phases[0].Compounds.Keys.ToList();
+            var worst = 0.0;
+            var worstCompound = "";
+            foreach (var compound in compounds)
+            {
+                var inlet = MolarFlow(feed, compound);
+                if (coolingIn != null && coolingIn.Phases[0].Compounds.ContainsKey(compound))
+                    inlet += MolarFlow(coolingIn, compound);
+                var outlet = MolarFlow(h2, compound) + MolarFlow(o2, compound);
+                if (coolingOut != null && coolingOut.Phases[0].Compounds.ContainsKey(compound))
+                    outlet += MolarFlow(coolingOut, compound);
+
+                var reference = Math.Max(Math.Abs(inlet), Math.Abs(outlet));
+                if (reference < 1e-12) continue;
+                var error = Math.Abs(inlet - outlet) / reference;
+                if (error > worst)
+                {
+                    worst = error;
+                    worstCompound = compound;
+                }
+            }
+
+            Console.WriteLine("balance {0}: worst compound {1} closed to {2:E3}", file, worstCompound, worst);
+            Check(worst < 1e-8, string.Format(CultureInfo.InvariantCulture,
+                "mass balance: {0}: compound '{1}' closes to {2:E3} (limit 1e-8)", file, worstCompound, worst));
+
+            var inletMass = feed.GetMassFlow() + (coolingIn?.GetMassFlow() ?? 0.0);
+            var outletMass = h2.GetMassFlow() + o2.GetMassFlow() + (coolingOut?.GetMassFlow() ?? 0.0);
+            var massError = Math.Abs(inletMass - outletMass) / Math.Max(inletMass, 1e-12);
+            Check(massError < 1e-8, string.Format(CultureInfo.InvariantCulture,
+                "mass balance: {0}: total mass closes to {1:E3} (limit 1e-8)", file, massError));
+        }
+
+        /// <summary>
+        /// Electrical power in equals the chemical power leaving in H2 plus the heat removed.
+        /// Uses the hydrogen LHV basis the model already reports.
+        /// </summary>
+        private static void CheckEnergyBalance(IFlowsheet flowsheet, ElectrolyzerUnitOpBase unit, string file)
+        {
+            var h2 = ConnectedStream(flowsheet, unit, 0, false);
+            Check(h2 != null, "energy balance: hydrogen outlet connected: " + file);
+            if (h2 == null) return;
+
+            // 241.826 kJ/mol is the LHV of water; the model already reports the LHV efficiency.
+            const double lhvKjPerMol = 241.826;
+            var hydrogenMolarFlow = MolarFlow(h2, "Hydrogen");
+            var chemicalKW = hydrogenMolarFlow * lhvKjPerMol;
+            var coolingKW = unit.CoolingDuty;
+            var electricalKW = unit.Power;
+
+            Console.WriteLine("energy {0}: electrical={1:F3} kW, chemical(LHV)={2:F3} kW, cooling={3:F3} kW, HHV eff={4:P2}",
+                file, electricalKW, chemicalKW, coolingKW, unit.EfficiencyHHV);
+
+            Check(chemicalKW <= electricalKW * (1.0 + 1e-6),
+                string.Format(CultureInfo.InvariantCulture,
+                    "energy balance: {0}: chemical power {1:F3} kW exceeds electrical input {2:F3} kW",
+                    file, chemicalKW, electricalKW));
+
+            // Water splitting at constant T: every kW above the thermoneutral voltage becomes heat,
+            // and the model routes all of it to the coolant.
+            var thermoneutralKW = unit.Current * unit.Parameters["N_cells"].Value * unit.ThermoneutralVoltage / 1000.0;
+            var expectedHeatKW = Math.Max(0.0, electricalKW - thermoneutralKW);
+            var heatError = Math.Abs(expectedHeatKW - coolingKW) / Math.Max(electricalKW, 1e-12);
+            Console.WriteLine("energy {0}: thermoneutral={1:F3} kW, expected heat={2:F3} kW, model heat={3:F3} kW ({4:P2} of input)",
+                file, thermoneutralKW, expectedHeatKW, coolingKW, heatError);
+            Check(heatError < 0.02, string.Format(CultureInfo.InvariantCulture,
+                "energy balance: {0}: heat removed {1:F3} kW vs heat generated {2:F3} kW", file, coolingKW, expectedHeatKW));
+        }
+
+        private static MaterialStream ConnectedStream(IFlowsheet flowsheet, ElectrolyzerUnitOpBase unit, int index, bool inlet)
+        {
+            var connector = inlet ? unit.GraphicObject.InputConnectors[index] : unit.GraphicObject.OutputConnectors[index];
+            if (connector == null || !connector.IsAttached) return null;
+            var attached = inlet ? connector.AttachedConnector.AttachedFrom.Name : connector.AttachedConnector.AttachedTo.Name;
+            if (!flowsheet.SimulationObjects.ContainsKey(attached)) return null;
+            return flowsheet.SimulationObjects[attached] as MaterialStream;
+        }
+
+        private static double MolarFlow(MaterialStream stream, string compound)
+        {
+            if (!stream.Phases[0].Compounds.ContainsKey(compound)) return 0.0;
+            return stream.Phases[0].Compounds[compound].MolarFlow.GetValueOrDefault();
         }
 
         private static void TestDynamicSamples()
