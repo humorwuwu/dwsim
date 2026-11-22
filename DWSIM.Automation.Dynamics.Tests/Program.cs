@@ -225,7 +225,19 @@ namespace DWSIM.Automation.Dynamics.Tests
                 flowsheet.DynamicsManager.IntegratorList.Count,
                 flowsheet.DynamicsManager.CurrentSchedule);
 
+            var manager = (ICustomXMLSerialization)flowsheet.DynamicsManager;
+            var managerXml = manager.SaveData();
+            Console.WriteLine("serialized manager: {0} elements, ScheduleList children={1}",
+                managerXml.Count,
+                managerXml.FirstOrDefault(e => e.Name == "ScheduleList")?.Elements().Count() ?? -1);
+
             automation.SaveFlowsheet(flowsheet, Path.Combine(directory, fileName), true);
+
+            var reloaded = automation.LoadFlowsheet(Path.Combine(directory, fileName));
+            Console.WriteLine("after load: schedules={0}, integrators={1}, current={2}",
+                reloaded.DynamicsManager.ScheduleList.Count,
+                reloaded.DynamicsManager.IntegratorList.Count,
+                reloaded.DynamicsManager.CurrentSchedule);
             Console.WriteLine("generated {0}: power={1} kW, H2 purity={2}%", fileName, unit.Power, unit.H2Purity);
         }
 
