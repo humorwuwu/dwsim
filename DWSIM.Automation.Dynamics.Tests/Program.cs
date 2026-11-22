@@ -94,6 +94,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestInterlocks();
             TestDynamicSupport();
             TestDynamicSamples();
+            TestDynamicBaseline();
             TestPlantSamples();
 
             if (Environment.GetEnvironmentVariable("H2SIM_INTERLOCK_TEST") == "1")
@@ -261,6 +262,112 @@ namespace DWSIM.Automation.Dynamics.Tests
             flowsheet.ConnectObjects(knockOutGas.GraphicObject, stage2.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(stage2Power.GraphicObject, stage2.GraphicObject, 0, 1);
             flowsheet.ConnectObjects(stage2.GraphicObject, product.GraphicObject, 0, 0);
+        }
+
+        /// <summary>
+        /// Numerical regression for the six dynamic samples: the headless runner must reproduce
+        /// the recorded final state within a tight relative tolerance. The baseline can be
+        /// rewritten with H2SIM_WRITE_BASELINE=1 when an intended model change moves it.
+        /// </summary>
+        private static void TestDynamicBaseline()
+        {
+            var directories = new[] { "samples", Path.Combine("PlatformFiles", "Common", "samples") };
+            var directory = directories.FirstOrDefault(Directory.Exists);
+            if (directory == null) return;
+
+            var baselineCandidates = new[]
+            {
+                Path.Combine("dynamic", "samples_baseline.csv"),
+                Path.Combine("tests", "dynamic", "samples_baseline.csv")
+            };
+            var baselinePath = baselineCandidates.FirstOrDefault(File.Exists);
+            var writeBaseline = Environment.GetEnvironmentVariable("H2SIM_WRITE_BASELINE") == "1";
+
+            var expected = new Dictionary<string, double>(StringComparer.Ordinal);
+            if (baselinePath != null && !writeBaseline)
+            {
+                foreach (var raw in File.ReadLines(baselinePath))
+                {
+                    var line = raw.Trim();
+                    if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("sample,")) continue;
+                    var parts = line.Split(',');
+                    if (parts.Length < 3) continue;
+                    expected[parts[0] + "|" + parts[1]] = double.Parse(parts[2], CultureInfo.InvariantCulture);
+                }
+            }
+
+            var written = new List<string> { "sample,variable,value,relative_tolerance" };
+            var failures = 0;
+
+            foreach (var file in Directory.EnumerateFiles(directory, "Dynamic Simulation - *.dwxmz").OrderBy(x => x))
+            {
+                var name = Path.GetFileName(file);
+                try
+                {
+                    var automation = new global::DWSIM.Automation.Automation3();
+                    var flowsheet = automation.LoadFlowsheet(file);
+                    var schedule = flowsheet.DynamicsManager.ScheduleList[flowsheet.DynamicsManager.CurrentSchedule];
+                    var integrator = flowsheet.DynamicsManager.IntegratorList[schedule.CurrentIntegrator];
+
+                    var stats = DynamicsRunner.Run(flowsheet, new RunOptions
+                    {
+                        DurationSeconds = 10.0,
+                        StepSeconds = name.Contains("PFR") ? 0.1 : integrator.IntegrationStep.TotalSeconds,
+                        ReuseInitialState = schedule.UseCurrentStateAsInitial,
+                        InitialStateId = schedule.InitialFlowsheetStateID
+                    }, new HeadlessDynamicsHost());
+
+                    if (stats.Error != null)
+                    {
+                        Check(false, "dynamic baseline: " + name + ": " + stats.Error.Message);
+                        continue;
+                    }
+
+                    // The metric: total enthalpy of every material stream, which any change to the
+                    // solver, unit operation or integrator will move.
+                    var enthalpy = flowsheet.SimulationObjects.Values
+                        .OfType<MaterialStream>()
+                        .Sum(s => s.GetMassEnthalpy() * s.GetMassFlow());
+
+                    var key = name + "|total_stream_enthalpy_kw";
+                    written.Add(string.Format(CultureInfo.InvariantCulture, "{0},total_stream_enthalpy_kw,{1:R},1e-6", name, enthalpy));
+
+                    if (writeBaseline)
+                    {
+                        Console.WriteLine("baseline {0}: enthalpy={1:R} kW", name, enthalpy);
+                        continue;
+                    }
+
+                    if (!expected.TryGetValue(key, out var reference))
+                    {
+                        Console.WriteLine("baseline {0}: no reference recorded (enthalpy={1:R} kW)", name, enthalpy);
+                        continue;
+                    }
+
+                    var error = Math.Abs(enthalpy - reference) / Math.Max(Math.Abs(reference), 1e-9);
+                    if (error > 1e-6)
+                    {
+                        failures++;
+                        Check(false, string.Format(CultureInfo.InvariantCulture,
+                            "dynamic baseline: {0}: enthalpy {1:R} kW vs {2:R} kW ({3:P2})", name, enthalpy, reference, error));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Check(false, "dynamic baseline: " + name + ": " + ex.Message);
+                }
+            }
+
+            if (writeBaseline && baselinePath != null)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(baselinePath)));
+                File.WriteAllLines(baselinePath, written);
+                Console.WriteLine("wrote dynamic baseline: " + baselinePath);
+            }
+            else if (baselinePath == null)
+            {
+                Console.WriteLine("dynamic baseline: no baseline file yet, " + written.Count + " samples measured");
+            }
         }
 
         private static void TestPlantSamples()
