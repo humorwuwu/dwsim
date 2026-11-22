@@ -150,7 +150,12 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             coolingIn.SetTemperature(298.15);
             coolingIn.SetPressure(101325.0);
-            coolingIn.SetMassFlow(1.0);
+            // The coolant has to absorb the stack heat with a realistic rise (about 10 K). The heat
+            // fraction of the electrical input is the same one the KPI check observes:
+            // 27% for the PEM cell voltage and 11.5% for the alkaline one.
+            var heatFraction = unit is AlkalineElectrolyzer ? 0.1152 : 0.2695;
+            var coolantRate = Math.Max(1.0, powerKW * heatFraction * 1000.0 / (4180.0 * 10.0));
+            coolingIn.SetMassFlow(coolantRate);
             coolingIn.SetOverallComposition(new[] { 1.0, 0.0, 0.0 });
             coolingIn.SetFlashSpec("PT");
             coolingIn.Calculate();
@@ -429,6 +434,25 @@ namespace DWSIM.Automation.Dynamics.Tests
                         }, new HeadlessDynamicsHost());
                         Check(dynamicStats.Error == null && storage.TankPressure > startPressure,
                             "storage pressure rises: " + Path.GetFileName(file) + " " + startPressure + " -> " + storage.TankPressure);
+
+                        // The stack must not run away thermally: with the coolant wired in, and the
+                        // cooling stream it draws from sized for the heat load, the temperature has
+                        // to stay near the operating point through the run.
+                        if (unit != null && dynamicStats.Error == null)
+                        {
+                            var stackTemperature = unit.StackTemperature;
+                            var coolantFlow = unit.GetDynamicProperty("Cooling Water Flow");
+                            Console.WriteLine("plant dynamics {0}: stack {1:F2} K, coolant {2} kg/s, trip={3}",
+                                Path.GetFileName(file), stackTemperature,
+                                coolantFlow == null ? "?" : Convert.ToDouble(coolantFlow).ToString("F2", CultureInfo.InvariantCulture),
+                                unit.TripLatched);
+                            Check(stackTemperature < unit.Parameters["StackTemperature_trip"].Value,
+                                string.Format(CultureInfo.InvariantCulture,
+                                    "plant dynamics: {0}: stack temperature {1:F2} K stayed below the trip point",
+                                    Path.GetFileName(file), stackTemperature));
+                            Check(coolantFlow != null && Convert.ToDouble(coolantFlow) > 0.0,
+                                "plant dynamics: coolant flow reached the thermal model: " + Path.GetFileName(file));
+                        }
                     }
                 }
                 catch (Exception ex)

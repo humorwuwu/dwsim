@@ -300,6 +300,19 @@ Namespace UnitOperations
                 propertyValue = GetDynamicProperty("Coolant Inlet Temperature")
                 If propertyValue IsNot Nothing Then TcoolIn = Convert.ToDouble(propertyValue)
 
+                ' When the stack is connected to a cooling stream, take the flow and supply
+                ' temperature from it so the thermal model follows the plant, not a fixed default.
+                Dim coolingIn = GetInletMaterialStream(1)
+                If coolingIn IsNot Nothing Then
+                    Dim streamFlow = coolingIn.GetMassFlow()
+                    If streamFlow > 0.0 Then
+                        mCoolant = streamFlow
+                        TcoolIn = coolingIn.GetTemperature()
+                        SetDynamicProperty("Cooling Water Flow", mCoolant)
+                        SetDynamicProperty("Coolant Inlet Temperature", TcoolIn)
+                    End If
+                End If
+
                 Dim cpCoolant = 4180.0
                 propertyValue = GetDynamicProperty("Coolant Specific Heat")
                 If propertyValue IsNot Nothing Then cpCoolant = Convert.ToDouble(propertyValue)
