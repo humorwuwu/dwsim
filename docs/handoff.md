@@ -13,9 +13,11 @@
   - `release 0.3.0`：版本与 `AssemblyInfo`
   - `docs`：macOS V-3 失败记录与交接
   - `T-4.1`：外部 UO 描述写入图形，模板重新生成
-  - `ci`：4.6.1 devpack 安装重试（待 `workflow` scope 授权后推送）
-- Windows CI run `45106985172`（HEAD `6bbded0c8`）整轮 **success**；Windows 单文件包已下载到
-  `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MB）。
+  - `ci`：4.6.1 devpack 安装重试
+  - `docs`：0.3.0 CI 与安装包记录
+- Windows CI run `45109230393`（HEAD `54f045bd5`，含 devpack 重试）整轮 **success**；
+  Windows 单文件包在 `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MiB，
+  SHA-256 `71d84434…`）。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -106,31 +108,32 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
 
 按这个顺序，不要先做发布，也不要做 PLC。
 
-1. **推送 CI 重试 commit 并看新一轮。** 当前 token 需要 `workflow` scope 才能改
-   `.github/workflows/`：
+1. **Windows CI 已绿。** 最近两轮 `45106985172`（HEAD `6bbded0c8`）和
+   `45109230393`（HEAD `54f045bd5`，含 devpack 重试）都是整轮 success。
+   若再改 `.github/workflows/`，token 必须带 `workflow` scope：
 
    ```bash
    gh auth refresh -h github.com -s workflow
    gh auth setup-git
+   ```
+
+   这台机器到 github.com 的 IPv4 路由会抖动，push 用：
+
+   ```bash
    git -c http.version=HTTP/1.1 -c http.postBuffer=524288000 \
+       -c http.curloptResolve=github.com:443:20.247.166.64 \
        -c url."https://github.com/".insteadOf="git@github.com:" \
        push origin h2sim/phase-a
    ```
 
-   HTTP/2 在这台机器/网络上会报 “Error in the HTTP2 framing layer”，必须带
-   `http.version=HTTP/1.1`。推完看：
+   `20.247.166.64` 是当前 `dig github.com` 的地址；失效时重新查。纯文档 commit 可带
+   `[skip ci]` 避免再跑一轮。
 
-   ```bash
-   gh run list --repo humorwuwu/dwsim --limit 3 --json databaseId,status,headSha,displayTitle
-   gh run view <id> --repo humorwuwu/dwsim --log 2>&1 | grep -E 'FAIL:|error BC|error CS|flash |alkaline SEC|plant |compression'
-   ```
-
-   重点看：新的 devpack 重试步骤是否工作、两个厂模板是否仍加载/计算、
-   `CheckCompressionTrain` 的稳态断言是否过。
-
-2. **Windows 安装包已按 0.3.0 构建**（CI run `45106985172`，`h2sim-windows-package`
-   artifact），已下载到 `release/windows/H2sim-0.3.0-windows-x64.exe`。还差一台干净的
-   Windows 机器做双击启动验证；本机 macOS 只能确认文件是 NSIS PE32。`release/` 不进 git。
+2. **Windows 安装包已按 0.3.0 构建。** 最新包来自 CI run `45109230393` 的
+   `h2sim-windows-package` artifact：`release/windows/H2sim-0.3.0-windows-x64.exe`
+   （195 MiB，SHA-256 `71d84434…`）。包内 3718 个文件，`DWSIM.exe` 的
+   `AssemblyVersion` 是 `0.3.0.0`，两个厂模板与仓库字节一致。还差一台干净的 Windows
+   机器做双击启动验证；本机 macOS 只能确认文件是 NSIS PE32。`release/` 不进 git。
 
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。
 4. **LyeLoop 冷却模式未实现**（T-1.4）。当前只有 WaterFlow；R7 的变流量收益需要回路拓扑和曲线。
