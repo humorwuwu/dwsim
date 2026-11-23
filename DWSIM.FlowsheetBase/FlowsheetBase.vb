@@ -1010,6 +1010,9 @@ Imports DWSIM.ExtensionMethods
                 Dim myNode As New ExternalUnitOperationGraphic(mpx, mpy, 40, 40)
                 myNode.Tag = uoobj.Prefix + objindex
                 If tag <> "" Then myNode.Tag = tag
+                ' Headless generation never draws, so save the description here. The
+                ' loader matches external UOs by it before restoring the connectors.
+                myNode.Description = DirectCast(uoobj, Interfaces.ISimulationObject).Description
                 gObj = myNode
                 CheckTag(gObj)
                 gObj.Name = Guid.NewGuid.ToString

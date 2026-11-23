@@ -7,10 +7,12 @@
 - 仓库：`/Volumes/SSD_exit/code_go/H2sim`（外置 SSD；旧的 `/Users/wcx/ongoing/H2sim` 已不是工作副本）
 - 分支：`h2sim/phase-a`
 - 版本：`VERSION` = `0.3.0`，`CHANGELOG.md` 有对应的 0.3.0 节，所有 `AssemblyInfo` 已同步
-- 今天的工作已提交为三个 commit：
+- 今天的工作已提交为五个 commit：
   - `T-0.3`：非 Windows 构建 + macOS 打包脚本
   - `T-4.1`：阴极闪蒸 + 两级压缩断言 + ALK SEC 回归
   - `release 0.3.0`：版本与 `AssemblyInfo`
+  - `docs`：macOS V-3 失败记录与交接
+  - `T-4.1`：外部 UO 描述写入图形，模板重新生成
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -29,6 +31,7 @@
 | 阴极气先冷到 40 °C，再由 `Vessel`（标签 `V-GL`）闪蒸 | ALK 水 0.278 mol/s 进、0.235 mol/s 凝出；PEM 0.0370 进、0.0314 凝出。干气标签 `H2-DRY`，凝液 `H2-COND` |
 | ALK SEC 6 个锚点 | `alkaline SEC: 6 points, worst 2.11%` |
 | 两级压缩断言 | 稳态 C-1/C-2 轴功 = 能量流 = 质量流量 × 焓升；动态只要求出口压力规格和正轴功 |
+| 外部 UO 描述入库 | `AddObjectToSurface` 写入 `GraphicObject.Description`；模板加载时按描述匹配电解槽/纯化器/储罐，测试断言描述非空 |
 | 厂模板重新生成 | `PlatformFiles/Common/samples/PEM Electrolysis Plant.dwxmz`、`Alkaline Electrolysis Plant.dwxmz` |
 
 ALK SEC **不是论文数字化曲线**。它把已有的 30 wt% KOH / 80 °C 电压包络按法拉第定律换算：

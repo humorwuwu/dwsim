@@ -32,6 +32,9 @@
 - The upstream PFR dynamic sample uses a catalyst void fraction of 0.4, so the
   residence time is no longer zero.
 - `RunOptions.StepSeconds` is applied to the integrator.
+- Generated flowsheets save the external unit operation description on its
+  graphic, so loading matches the electrolyzer, purifier and tank instead of
+  rebuilding generic connectors.
 
 ## [0.2.1] - 2026-11-16
 

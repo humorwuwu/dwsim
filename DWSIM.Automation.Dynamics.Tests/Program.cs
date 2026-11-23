@@ -442,6 +442,19 @@ namespace DWSIM.Automation.Dynamics.Tests
                     Check(errors.Count == 0, "plant sample: " + Path.GetFileName(file) + ": " +
                         string.Join("; ", errors.Select(e => e.ToString())));
 
+                    // The loader matches external UOs by description. Headless generation
+                    // never draws, so AddObjectToSurface has to save it up front.
+                    var externalObjects = flowsheet.SimulationObjects.Values
+                        .Where(o => o.GraphicObject != null && o.GraphicObject.ObjectType == ObjectType.External)
+                        .ToList();
+                    Check(externalObjects.Count >= 3,
+                        "plant external UOs present: " + Path.GetFileName(file) + " (" + externalObjects.Count + ")");
+                    foreach (var external in externalObjects)
+                    {
+                        Check(!string.IsNullOrEmpty(external.GraphicObject.Description),
+                            "external UO description saved: " + external.GraphicObject.Tag + " " + Path.GetFileName(file));
+                    }
+
                     var unit = flowsheet.SimulationObjects.Values.OfType<ElectrolyzerUnitOpBase>().FirstOrDefault();
                     Check(unit != null && unit.Power > 0, "plant electrolyzer: " + Path.GetFileName(file));
                     if (unit != null)
