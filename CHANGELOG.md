@@ -22,6 +22,9 @@
   purifier reports both product purity and product impurity.
 - A numerical baseline for the six dynamic samples, and a check of the stack's
   ambient heat-loss share.
+- Non-Windows builds of the dynamics tests, and an experimental macOS dmg
+  packaging script. The macOS GUI is not runnable yet (see
+  `docs/verification.md`, Gate 0 V-3).
 
 ### Fixed
 

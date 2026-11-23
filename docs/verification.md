@@ -226,9 +226,15 @@
 - `build (Debug)`、`build (Release)` 均通过。Release 侧依次通过：还原/构建、
   启动冒烟、SignalMap 测试、OpenPLC v4 Modbus 探针、动态 headless 冒烟、
   两个厂模板生成、单文件打包。
-- Windows 产物：`release/windows/H2sim-0.3.0-windows-x64.exe`（195 MB，NSIS
-  自解压），由 CI 的 `h2sim-windows-package` artifact 下载。
-  SHA-256：`fdd0337bb2f1b8dcc2037c171f9f3be0dd302c6531cf7290a33a7f1dad8a4bff`。
+- Windows 产物：`release/windows/H2sim-0.3.0-windows-x64.exe`（195 MiB，NSIS
+  自解压），由 CI 的 `h2sim-windows-package` artifact 下载（run `45109230393`，
+  HEAD `54f045bd5`）。
+  SHA-256：`71d844343dbc22e4c5089d129b3af5c8573e54a9740dbb3143df5db2a43cec2a`。
+- 包内容抽查（7-Zip 26.06）：3718 个文件，解压约 869 MB；`DWSIM.exe` 的
+  `AssemblyVersion` 为 `0.3.0.0`；Windows 包包含 `ThermoCS/` 和
+  `DWSIM.ProFeatures.dll`（Windows 经典 UI 预期）。
+- 包内两个厂模板与仓库 `PlatformFiles/Common/samples/` 字节一致：
+  PEM `219661a9…`，ALK `bff1ba4b…`。
 - 同一轮 `openplc-compiler` job 也通过（三回路台架、V-5.1.6 延迟/丢包、
   OPC UA 对照）；PLC 相关工作按 2026-11-22 方向仍暂停。
 - 同轮暴露并修复的 CI 问题：Chocolatey 源 503 会让
