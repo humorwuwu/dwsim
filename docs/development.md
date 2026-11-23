@@ -81,16 +81,22 @@ bash scripts/package-macos.sh
 - 前置：先 `bash scripts/build-macos.sh`，`DWSIM.UI.Desktop/bin/Release/DWSIM.UI.Desktop.exe` 存在。
 - 产物：`release/macos/H2sim-<version>-macos-x64.dmg`，内含 `H2sim.app`。
 - 0.3.1 已在本机和 GitHub `macos-15-intel` runner 打出；当前
-  `release/macos/H2sim-0.3.1-macos-x64.dmg` 来自 CI（166 MB，
-  SHA-256 `10367bf2…`）。
+  `release/macos/H2sim-0.3.1-macos-x64.dmg` 是 **GTK3 版**（165 MB，
+  SHA-256 `c1c81dc3…`）。
 - 主程序是 x86_64，Apple Silicon 上由 Rosetta 运行。
-- 启动器读取 `/Library/Frameworks/Mono.framework`（Mono 6.12）。没有安装时，打开 app 会提示先装 Mono。
+- 启动器走 **GTK3 + mono**：设置 `H2SIM_MAC_RENDERER=Gtk3`、
+  `PANGOCAIRO_BACKEND=fontconfig`，再 `exec mono DWSIM.UI.Desktop.exe`。
+  不再使用 Eto 的 XamMac2 启动器（它需要 Xamarin.Mac 自带的 Mono）。
+- 运行目标机需要 **x86_64 GTK3**：Intel Mac `brew install gtk+3`；Apple Silicon
+  需要 Rosetta 前缀 `/usr/local` 里的 x86_64 Homebrew
+  （`arch -x86_64 /usr/local/bin/brew install gtk+3`）。
 - 包内不含 `ThermoCS/`（i386）、ThermoC 程序集/配置和 `DWSIM.ProFeatures.dll`。
-- 未签名未公证。
-- **这个包当前不能启动**。Gate 0 V-3 已失败：`Eto.XamMac2` 需要 Xamarin.Mac 自带的
-  Mono 运行时，系统 Mono 6.12 缺少它调用的
-  `System.Threading._ThreadPoolWaitCallback.SetDispatcher`。dmg 只用于验证打包流程，
-  不能当发行物。详见 `docs/verification.md` 的「Gate 0 V-3」。
+- 未签名未公证。CI 探针（`build-macos.yml` 的 `probe=true`）已验证打包后的
+  `H2sim.app` 在 Intel + GTK3 上存活 30 s；runner 没有可截图的显示会话，
+  所以还没有窗口截图证据。
+- **XamMac2 版本不能启动**（Xamarin.Mac 运行时缺失）。GTK3 版本已在 CI 上通过
+  30 s 存活探测，但还需要在真实显示器上确认窗口和交互；完成前不要把 dmg
+  当通用发行物。详见 `docs/verification.md` 的「macOS GTK3」。 
 
 ## macOS 说明
 

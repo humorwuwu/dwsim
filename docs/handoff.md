@@ -21,10 +21,12 @@
   `release/windows/H2sim-0.3.1-windows-x64.exe`（195 MiB，
   SHA-256 `8c5bd493…`）。0.3.0 的包也还在同目录，留作回退。
 - macOS：本机 `bash scripts/build-macos.sh`（Release/Debug）BUILD OK；
-  GitHub `build-macos` workflow 在 `macos-15-intel` 上装 Mono 6.12、打出 dmg
-  并跑完动力学测试 **PASS**（run `45147715488`）。当前
-  `release/macos/H2sim-0.3.1-macos-x64.dmg` 来自 CI（166 MB，
-  SHA-256 `10367bf2…`），但 **不能启动**（Gate 0 V-3 仍是 Xamarin.Mac 运行时缺失）。
+  GitHub `build-macos` workflow 在 `macos-15-intel` 上装 Mono 6.12，构建、
+  打包并跑完动力学测试 **PASS**（run `45170975565`）。GTK3 探测（run
+  `45170025975`）确认**打包后的 app** 在 x86_64 GTK3 上存活 30 s。
+  当前 `release/macos/H2sim-0.3.1-macos-x64.dmg` 是 GTK3 版（165 MiB，
+  SHA-256 `c1c81dc3…`）。XamMac2 启动器已弃用；GTK3 运行时需要 x86_64
+  GTK3（Intel Homebrew `/usr/local`）。真实显示器截图仍待补。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -108,8 +110,10 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
    `W-C1` / `W-C2` 与之相同。ALK 71.69 kW / 37.24 kW，PEM 10.47 kW / 9.45 kW。出口压力是规格，
    轴功是结果。生成器在稳态之后不改成 `PowerRequired`。
 8. **macOS 桌面方案 M1 已判失败，不要再试图用系统 Mono 启动 XamMac2。**
-   `Eto.XamMac2` 需要 Xamarin.Mac 自带的运行时；`release/macos/` 里的 dmg 只能证明打包流程。
-   详见 `docs/verification.md` 的「Gate 0 V-3」。
+   GTK3 是当前运行时路径：包启动器用 mono 直接跑 `DWSIM.UI.Desktop.exe`，
+   设置 `H2SIM_MAC_RENDERER=Gtk3` 和 `PANGOCAIRO_BACKEND=fontconfig`；XamMac2
+   启动器不再进包。CI 已验证打包后的 app 存活 30 s，但还没有真实显示器截图。
+   GTK3 需要 x86_64 的 `libgtk-3.0.dylib`。
 
 ## 5. 下一步
 
@@ -147,14 +151,13 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
 
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。
 4. **LyeLoop 冷却模式未实现**（T-1.4）。当前只有 WaterFlow；R7 的变流量收益需要回路拓扑和曲线。
-5. **macOS 桌面要么走 GTK3，要么迁 .NET 8。** 本地编译和 dmg 打包已经补全
-   （`scripts/build-macos.sh`、`scripts/package-macos.sh`），GitHub
-   `build-macos` workflow 也能在 `macos-15-intel` 上构建并跑完动力学测试。
-   只差运行时：`Eto.XamMac2` 要 Xamarin.Mac 自带的 Mono，系统 Mono 6.12 没有
-   `_ThreadPoolWaitCallback.SetDispatcher`。GTK3 需要 **x86_64** GTK3：Homebrew 在
-   Apple Silicon 上装的是 arm64（`/opt/homebrew/lib/libgtk-3.0.dylib`），x86_64 的
-   Mono 进程加载不了。可选 Rosetta 前缀（`/usr/local`）另装一套，或用 gtk-osx 的
-   x86_64 构建。在解决之前，不要把 dmg 当发行物。
+5. **macOS 桌面走 GTK3（.NET 8 仍是备选）。** 本地编译、dmg 打包和 GitHub
+   `build-macos` 已补全；包启动器已改为 mono + GTK3，CI 探针确认打包后的 app
+   存活 30 s，正常 run `45170975565` 也已构建并跑完动力学测试。当前 dmg
+   SHA-256 `c1c81dc3…`。还差真实显示器上的窗口/交互验证。GTK3 必须是
+   **x86_64**：Intel Mac `brew install gtk+3`；Apple Silicon 需要 Rosetta 前缀
+   `/usr/local` 的 x86_64 Homebrew（`arch -x86_64 /usr/local/bin/brew install gtk+3`），
+   因为 Mono 6.12 是 x86_64，加载不了 `/opt/homebrew` 的 arm64 GTK3。
 6. **`PROJECTS.md` 已登记。** 目录名 `H2sim` 保留大写，写在工作区「项目例外」里。
 
 明确不做：

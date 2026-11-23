@@ -156,15 +156,37 @@
 ## macOS GitHub Actions 构建（2026-11-23）
 
 - Workflow：`.github/workflows/build-macos.yml`，`macos-15-intel`（x64）。
-- Run `45147715488`，HEAD `3db5d40c1`；整轮 **success**。
+- 早期 run `45147715488`（HEAD `3db5d40c1`）验证了 XamMac2 包的构建链；
+  XamMac2 运行时不可用，已被 GTK3 包取代。
+- 最新 run `45170975565`（HEAD `853cda6af`）；整轮 **success**。
 - 步骤：安装 Mono 6.12 MDK → `scripts/build-macos.sh` → `scripts/package-macos.sh`
   → 上传 `h2sim-macos-dmg` → `scripts/test-macos.sh`。
 - 动力学测试在 runner 上末行 **PASS**（约 14 分钟，包含 ALK SEC、阴极闪蒸、
   两级压缩稳态/动态断言）。
-- CI dmg：`release/macos/H2sim-0.3.1-macos-x64.dmg`（166 MiB，SHA-256
-  `10367bf2…`）。包内 `DWSIM.UI.Desktop.exe` 版本 `0.3.1.0`，含两个厂模板，
-  不含 ThermoC/ProFeatures。
-- **仍然不能启动**：Gate 0 V-3 未解决，dmg 不是可用发行版。
+- CI dmg：`release/macos/H2sim-0.3.1-macos-x64.dmg`（165 MiB，SHA-256
+  `c1c81dc3…`）。启动器是 GTK3 + mono，不再是 XamMac2；包内
+  `DWSIM.UI.Desktop.exe` 版本 `0.3.1.0`，含两个厂模板，不含 ThermoC/ProFeatures。
+- 打包后的 app 已通过 30 s 存活探测；runner 无显示会话，真实窗口截图仍待补。
+
+## macOS GTK3 运行时探测（2026-11-23）
+
+- 第一次探测（run `45166288112`）：GTK3 初始化成功，程序进入
+  `gtk_label_render`，随后在 CoreText 的 `CopyEmojiImage`/ImageIO PNG 路径
+  原生段错误，进程未存活 30 s。
+- 第二次探测（run `45167860355`，HEAD `1d5189b5f`）：设置
+  `PANGOCAIRO_BACKEND=fontconfig` 并刷新字体缓存后，进程 **alive after 30 s**，
+  日志只有 IPOPT 提示。runner 是无显示的，`screencapture` 没有产出截图，所以
+  还没有窗口画面证据。
+- 第三次探测（run `45170025975`，HEAD `853cda6af`）：改用
+  `H2SIM_MAC_RENDERER=Gtk3` 环境变量，构建树和**打包后的 `H2sim.app`** 都在
+  30 s 后仍存活。启动器已改为 mono + GTK3，不再经过 XamMac2。
+- 正常 `build-macos` run `45170975565`：整轮 **success**，GTK3 dmg 已上传，
+  动力学测试 PASS。
+- 结论：**GTK3 渲染器在 x86_64 macOS + Homebrew GTK3 上可行**；XamMac2 仍然
+  不可用。GTK3 需要 **x86_64** 的 `libgtk-3.0.dylib`，Apple Silicon 上要用
+  Rosetta 前缀的 Homebrew（`/usr/local`）安装。
+- 下一步：在真实显示器上确认窗口和交互（runner 无显示会话），再决定是否把
+  GTK3 dmg 作为正式发行物。
 
 ## Gate 0 V-3 macOS 桌面启动（2026-11-23）
 
