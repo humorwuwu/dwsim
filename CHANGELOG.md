@@ -2,6 +2,37 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.3.0] - 2026-11-23
+
+### Added
+
+- Alkaline stack voltage is calibrated to a 30 wt% KOH / 80 °C industrial envelope
+  (about 1.76 V at 0.4 A/cm²), with a 6-point regression. The same envelope,
+  converted with Faraday's law at `etaF_ref = 0.99`, is the alkaline SEC reference.
+- Faraday efficiency follows the load as `i / (i + i_cross)`. Each electrolyzer
+  type carries its own `i_ref`.
+- Gas crossover scales with cathode pressure and temperature and is written into
+  the outlet streams. O2-in-H2, H2-in-O2 and hydrogen purity are read back from
+  those streams.
+- Plant templates cool the saturated cathode gas to 40 °C and flash it before
+  purification, then compress the product in two stages to 90 bar and 250 bar
+  (75% isentropic, interstage cool to 40 °C). Coolant flow is sized from the
+  stack cooling duty, and each template has a dynamics schedule.
+- The hydrogen tank uses the property-package compressibility factor. The
+  purifier reports both product purity and product impurity.
+- A numerical baseline for the six dynamic samples, and a check of the stack's
+  ambient heat-loss share.
+
+### Fixed
+
+- A power target below the stack minimum is rejected instead of being clamped
+  to the lowest operating point.
+- In dynamics, a cooler with an outlet-temperature, temperature-change or
+  outlet-vapor-fraction setpoint holds that setpoint.
+- The upstream PFR dynamic sample uses a catalyst void fraction of 0.4, so the
+  residence time is no longer zero.
+- `RunOptions.StepSeconds` is applied to the integrator.
+
 ## [0.2.1] - 2026-11-16
 
 ### Added
