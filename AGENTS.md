@@ -47,7 +47,8 @@ WPF 渲染器和两个 WPF Python 控制台。桌面窗口能否启动仍受 Gat
   Windows `xcopy` PostBuildEvent；`PlatformFiles/Common` 与 `PlatformFiles/macOS`
   会复制到输出目录，并排除 `ThermoCS/`、`DWSIM.Thermodynamics.ThermoC.dll`、
   `DWSIM.ProFeatures.dll`。产物：`DWSIM.UI.Desktop/bin/<Config>/DWSIM.UI.Desktop.exe`。
-  动力学测试的构建/运行命令见 `docs/handoff.md` 第 6 节。
+  动力学测试：`bash scripts/test-macos.sh`（参数会传给测试程序，例如
+  `--generate-samples "PlatformFiles/Common/samples"`）。
 
 - 构建产物：`DWSIM\bin\x64\Release\DWSIM.exe`。
 - Windows 单文件包：`powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1`（需要 NSIS `makensis`）。

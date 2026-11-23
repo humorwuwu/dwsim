@@ -145,6 +145,8 @@
 - 完整 `DWSIM.sln` 不在本机构建：sln 含 WPF 渲染器和两个 WPF Python 控制台，
   Mono 没有 WPF。脚本只构建 `DWSIM.UI.Desktop` 的依赖图（AnyCPU），并跳过
   `licenses.licx` 和 Windows `xcopy` PostBuildEvent。
+- 测试：`bash scripts/test-macos.sh` 一条命令完成还原、构建、补
+  `Private=False` 程序集和运行。本机 Release 配置末行 **PASS**（约 20 分钟）。
 - 工具链补全不等于窗口能启动：Gate 0 V-3 仍失败，见下节。
 - 打包：`bash scripts/package-macos.sh` 成功产出
   `release/macos/H2sim-0.3.1-macos-x64.dmg`（168 MB，SHA-256 `bf2718a0…`）。

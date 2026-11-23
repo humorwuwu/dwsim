@@ -51,7 +51,11 @@ msbuild DWSIM.sln /p:Configuration=ReleaseWinMac /p:Platform=x64 /m
 - 产物：`DWSIM.UI.Desktop/bin/<Config>/DWSIM.UI.Desktop.exe`。`PlatformFiles/Common`
   和 `PlatformFiles/macOS` 会复制到同目录；`ThermoCS/`、`DWSIM.Thermodynamics.ThermoC.dll`、
   `DWSIM.ProFeatures.dll` 会被移除（与 macOS 包一致）。
-- 动力学/Io 测试的构建与运行命令见 `docs/handoff.md` 第 6 节。
+- 动力学测试：`bash scripts/test-macos.sh`。脚本会还原、构建
+  `DWSIM.Automation.Dynamics.Tests`、把 `DWSIM/bin/<Config>` 里 `Private=False`
+  的程序集补到测试目录，再运行；参数原样传给测试程序（例如
+  `--generate-samples "PlatformFiles/Common/samples"`）。
+- Io/Modbus 测试仍按 `docs/verification.md` 的 `DWSIM.H2sim.Io.Tests` 命令单独构建。
 - **运行限制**：Gate 0 V-3 失败——`Eto.XamMac2` 需要 Xamarin.Mac 自带的 Mono 运行时，
   系统 Mono 6.12 没有它调用的 `_ThreadPoolWaitCallback.SetDispatcher`。编译工具链已补全，
   但桌面窗口仍不能启动；详见 `docs/verification.md`。

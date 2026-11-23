@@ -178,7 +178,14 @@ CONFIG=Debug bash scripts/build-macos.sh  # Debug
 `ThermoCS` / ThermoC / ProFeatures。**不要**在本机直接 `msbuild DWSIM.sln`：sln 里
 有 WPF 工程。
 
-动力学测试（手动命令，脚本不覆盖）：
+动力学测试（一条命令）：
+
+```bash
+cd /Volumes/SSD_exit/code_go/H2sim
+bash scripts/test-macos.sh
+```
+
+脚本内部会做下面这些步骤；排错时再手工执行：
 
 ```bash
 cd /Volumes/SSD_exit/code_go/H2sim
