@@ -220,6 +220,21 @@
 - 阴极气液分离：饱和阴极气冷到 40 °C 后由 `V-GL` 闪蒸。本机实测冷凝掉约 85% 的水（ALK 0.235 / 0.278 mol/s，PEM 0.0314 / 0.0370 mol/s），干气再进纯化器。
 - 边界：两级压缩保持出口压力模式（90 bar、250 bar）和 75% 等熵效率，级间冷却器是 40 °C 定温；储罐动态是集总模型。动态步之后只要求轴功仍为正、规格不被改掉。级间冷却器的动态持液会改写级间流股压力，所以动态断言不要求流股压力仍等于规格。
 
+## 0.3.0 Windows CI（2026-11-23）
+
+- Run `45106985172`，HEAD `6bbded0c8`；整轮 **success**。
+- `build (Debug)`、`build (Release)` 均通过。Release 侧依次通过：还原/构建、
+  启动冒烟、SignalMap 测试、OpenPLC v4 Modbus 探针、动态 headless 冒烟、
+  两个厂模板生成、单文件打包。
+- Windows 产物：`release/windows/H2sim-0.3.0-windows-x64.exe`（195 MB，NSIS
+  自解压），由 CI 的 `h2sim-windows-package` artifact 下载。
+  SHA-256：`fdd0337bb2f1b8dcc2037c171f9f3be0dd302c6531cf7290a33a7f1dad8a4bff`。
+- 同一轮 `openplc-compiler` job 也通过（三回路台架、V-5.1.6 延迟/丢包、
+  OPC UA 对照）；PLC 相关工作按 2026-11-22 方向仍暂停。
+- 同轮暴露并修复的 CI 问题：Chocolatey 源 503 会让
+  `netfx-4.6.1-devpack` 安装静默失败，随后所有 4.6.1 工程报 MSB3644。
+  `build-windows.yml` 已加三次重试；该改动单独提交、需要 `workflow` scope。
+
 ## 待执行
 
 | 用例 | 依赖 |

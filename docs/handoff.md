@@ -7,12 +7,15 @@
 - 仓库：`/Volumes/SSD_exit/code_go/H2sim`（外置 SSD；旧的 `/Users/wcx/ongoing/H2sim` 已不是工作副本）
 - 分支：`h2sim/phase-a`
 - 版本：`VERSION` = `0.3.0`，`CHANGELOG.md` 有对应的 0.3.0 节，所有 `AssemblyInfo` 已同步
-- 今天的工作已提交为五个 commit：
+- 今天的工作已提交并推送（`origin/h2sim/phase-a`）：
   - `T-0.3`：非 Windows 构建 + macOS 打包脚本
   - `T-4.1`：阴极闪蒸 + 两级压缩断言 + ALK SEC 回归
   - `release 0.3.0`：版本与 `AssemblyInfo`
   - `docs`：macOS V-3 失败记录与交接
   - `T-4.1`：外部 UO 描述写入图形，模板重新生成
+  - `ci`：4.6.1 devpack 安装重试（待 `workflow` scope 授权后推送）
+- Windows CI run `45106985172`（HEAD `6bbded0c8`）整轮 **success**；Windows 单文件包已下载到
+  `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MB）。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -103,31 +106,39 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
 
 按这个顺序，不要先做发布，也不要做 PLC。
 
-1. **推送并看 Windows CI。** 推送这台机器的 SSH 远程不可用：
+1. **推送 CI 重试 commit 并看新一轮。** 当前 token 需要 `workflow` scope 才能改
+   `.github/workflows/`：
 
    ```bash
-   git -c url."https://github.com/".insteadOf="git@github.com:" push origin h2sim/phase-a
+   gh auth refresh -h github.com -s workflow
+   gh auth setup-git
+   git -c http.version=HTTP/1.1 -c http.postBuffer=524288000 \
+       -c url."https://github.com/".insteadOf="git@github.com:" \
+       push origin h2sim/phase-a
    ```
+
+   HTTP/2 在这台机器/网络上会报 “Error in the HTTP2 framing layer”，必须带
+   `http.version=HTTP/1.1`。推完看：
 
    ```bash
    gh run list --repo humorwuwu/dwsim --limit 3 --json databaseId,status,headSha,displayTitle
    gh run view <id> --repo humorwuwu/dwsim --log 2>&1 | grep -E 'FAIL:|error BC|error CS|flash |alkaline SEC|plant |compression'
    ```
 
-   重点看：非 Windows 改动是否破坏了 Windows 构建、两个厂模板是否仍在 CI 里加载/计算、
+   重点看：新的 devpack 重试步骤是否工作、两个厂模板是否仍加载/计算、
    `CheckCompressionTrain` 的稳态断言是否过。
 
-2. **Windows 安装包没有按 0.3.0 重新构建。** CI 绿了之后跑
-   `scripts/package-windows.ps1`，产物放 `release/windows/`。`release/` 不进 git。
+2. **Windows 安装包已按 0.3.0 构建**（CI run `45106985172`，`h2sim-windows-package`
+   artifact），已下载到 `release/windows/H2sim-0.3.0-windows-x64.exe`。还差一台干净的
+   Windows 机器做双击启动验证；本机 macOS 只能确认文件是 NSIS PE32。`release/` 不进 git。
 
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。
-
-4. **macOS 桌面要么走 GTK3，要么迁 .NET 8。** GTK3 需要 **x86_64** GTK3：Homebrew 在
+4. **LyeLoop 冷却模式未实现**（T-1.4）。当前只有 WaterFlow；R7 的变流量收益需要回路拓扑和曲线。
+5. **macOS 桌面要么走 GTK3，要么迁 .NET 8。** GTK3 需要 **x86_64** GTK3：Homebrew 在
    Apple Silicon 上装的是 arm64（`/opt/homebrew/lib/libgtk-3.0.dylib`），x86_64 的 Mono 6.12
    进程加载不了。可选 Rosetta 前缀（`/usr/local`）另装一套，或用 gtk-osx 的 x86_64 构建。
    在解决之前，不要把 dmg 当发行物。
-
-5. **`PROJECTS.md` 已登记。** 目录名 `H2sim` 保留大写，写在工作区「项目例外」里。
+6. **`PROJECTS.md` 已登记。** 目录名 `H2sim` 保留大写，写在工作区「项目例外」里。
 
 明确不做：
 
