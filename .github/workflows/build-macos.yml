@@ -83,6 +83,7 @@ jobs:
         shell: bash
         run: |
           brew install gtk+3 gtksourceview3
+          fc-cache -f >/dev/null 2>&1 || true
 
       - name: Force the Gtk3 renderer
         shell: bash
@@ -100,6 +101,9 @@ jobs:
           export DYLD_LIBRARY_PATH="/usr/local/lib:${DYLD_LIBRARY_PATH:-}"
           export GTK_DATA_PREFIX="/usr/local"
           export XDG_DATA_DIRS="/usr/local/share:${XDG_DATA_DIRS:-}"
+          # Avoid CoreText's Apple Color Emoji image path, which crashes while
+          # Pango/Cairo renders a fallback glyph on the macOS runner.
+          export PANGOCAIRO_BACKEND="fontconfig"
           cd DWSIM.UI.Desktop/bin/Release
           mono DWSIM.UI.Desktop.exe > "$RUNNER_TEMP/gtk3.log" 2>&1 &
           pid=$!
