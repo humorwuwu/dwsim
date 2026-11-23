@@ -6,8 +6,8 @@
 |---|---|
 | 构建 | Windows x64 + Visual Studio 2022 Build Tools（MSBuild、.NET Framework 4.6.2 targeting pack）+ NuGet |
 | CI | GitHub Actions `windows-latest`（`.github/workflows/build-windows.yml`），push 触发 |
-| 运行（macOS） | Apple Silicon + Rosetta 2（已安装）；Gate 0 V-3 尚未验证，见 `docs/gate0-report.md` |
-| 本机 macOS | **没有** `dotnet` / `mono` / `msbuild` / `nuget`，不能本地构建 |
+| 运行（macOS） | Apple Silicon + Rosetta 2（已安装）；Gate 0 V-3 失败，桌面窗口仍起不来，见 `docs/gate0-report.md` |
+| 本机 macOS | Mono 6.12 Framework MDK（`mono` / `msbuild` / `nuget`），可本地编译桌面程序和动力学测试；完整 `DWSIM.sln` 因 WPF 工程不可构建 |
 
 ## 构建步骤
 
@@ -32,19 +32,29 @@ msbuild DWSIM.sln /p:Configuration=ReleaseWinMac /p:Platform=x64 /m
 
 ## 本地 macOS（Mono）
 
-- 安装：官方 Mono 6.12（x86_64，Rosetta 下运行），路径 `/Library/Frameworks/Mono.framework/Versions/Current/bin`。
-- 还原：`nuget restore DWSIM.sln -PackagesDirectory packages`。
-- 构建 Io 测试：
+- 工具链：Mono **6.12.0.206**（`msbuild` 16.10.1、`nuget` 6.6.2.1），x86_64，
+  路径 `/Library/Frameworks/Mono.framework/Versions/Current/bin`。
+- 桌面构建：
 
   ```sh
-  msbuild DWSIM.H2sim.Io.Tests/DWSIM.H2sim.Io.Tests.csproj \
-    /p:Configuration=Release /p:Platform=AnyCPU \
-    /p:PostBuildEvent= /p:GenerateSerializationAssemblies=Off \
-    /p:NetStandardFacadesPath=/Library/Frameworks/Mono.framework/Versions/6.12.0/lib/mono/4.7.2-api/Facades
+  bash scripts/build-macos.sh               # Release
+  CONFIG=Debug bash scripts/build-macos.sh  # Debug
   ```
 
-- `Directory.Build.targets` 会在非 Windows 上归一化 HintPath 并补 netstandard facade。
-- 限制：`DWSIM.Controls.PythonConsoleControl` 是 WPF 工程，Mono 无法编译，完整 Dynamics/Automation 构建需要 CI 产物或 Windows。
+  `scripts/build.sh` 在 Darwin 上会自动转给 `build-macos.sh`。脚本只构建
+  `DWSIM.UI.Desktop` 的依赖图（AnyCPU），**不构建完整 sln**：sln 里的
+  `DWSIM.UI.Desktop.WPF`、`DWSIM.Controls.IronPythonConsoleControl` 等 WPF 工程
+  在 Mono 上编不过。脚本同时跳过 `licenses.licx` 和 Windows `xcopy` PostBuildEvent。
+- facade：脚本自动在 `$MONO_ROOT/lib/mono/*-api/Facades` 里找 `netstandard.dll`，
+  传给 `NetStandardFacadesPath`。不要用 `-m` 并行；Mono 的 msbuild 会在
+  `EnumProcesses` 处崩，必须 `/m:1`。
+- 产物：`DWSIM.UI.Desktop/bin/<Config>/DWSIM.UI.Desktop.exe`。`PlatformFiles/Common`
+  和 `PlatformFiles/macOS` 会复制到同目录；`ThermoCS/`、`DWSIM.Thermodynamics.ThermoC.dll`、
+  `DWSIM.ProFeatures.dll` 会被移除（与 macOS 包一致）。
+- 动力学/Io 测试的构建与运行命令见 `docs/handoff.md` 第 6 节。
+- **运行限制**：Gate 0 V-3 失败——`Eto.XamMac2` 需要 Xamarin.Mac 自带的 Mono 运行时，
+  系统 Mono 6.12 没有它调用的 `_ThreadPoolWaitCallback.SetDispatcher`。编译工具链已补全，
+  但桌面窗口仍不能启动；详见 `docs/verification.md`。
 
 ## 打包（Windows 单文件）
 

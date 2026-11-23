@@ -14,8 +14,10 @@ H2sim 是 DWSIM 9.0.5 的 GPLv3 派生仓库，目标改造为「电解水制氢
 
 ## 构建
 
-唯一验证过的构建路线：**Windows x64 + MSBuild**（GitHub Actions `windows-latest`）。
-本机 macOS 上没有 `dotnet`/`mono`/`msbuild`/`nuget`，不能本地构建；需要验证时 push 到 CI。
+发行路线：**Windows x64 + MSBuild**（GitHub Actions `windows-latest`）。
+macOS 本机现在有 **Mono 6.12 Framework MDK**（`mono`/`msbuild`/`nuget`），可以本地编译
+Eto 桌面程序和动力学测试；**完整 `DWSIM.sln` 在 macOS 上不能构建**，因为 sln 里有
+WPF 渲染器和两个 WPF Python 控制台。桌面窗口能否启动仍受 Gate 0 V-3 限制。
 
 - CI：`.github/workflows/build-windows.yml`，push 触发，产物 `DWSIM/bin/x64/Release/`。
 - 本地（Windows）：
@@ -32,6 +34,20 @@ H2sim 是 DWSIM 9.0.5 的 GPLv3 派生仓库，目标改造为「电解水制氢
   ```
 
   上游 sln 没有 `Release|x64` 这个 solution 配置；`ReleaseWinMac|x64` 映射到项目 `Release|x64`，产物仍在 `bin\x64\Release`。
+
+- 本地（macOS）：
+
+  ```sh
+  bash scripts/build-macos.sh              # Release
+  CONFIG=Debug bash scripts/build-macos.sh # Debug
+  ```
+
+  `scripts/build.sh` 在 Darwin 上会自动转给 `build-macos.sh`。脚本只构建
+  `DWSIM.UI.Desktop` 的依赖图（AnyCPU），跳过 WPF 工程、`licenses.licx` 和
+  Windows `xcopy` PostBuildEvent；`PlatformFiles/Common` 与 `PlatformFiles/macOS`
+  会复制到输出目录，并排除 `ThermoCS/`、`DWSIM.Thermodynamics.ThermoC.dll`、
+  `DWSIM.ProFeatures.dll`。产物：`DWSIM.UI.Desktop/bin/<Config>/DWSIM.UI.Desktop.exe`。
+  动力学测试的构建/运行命令见 `docs/handoff.md` 第 6 节。
 
 - 构建产物：`DWSIM\bin\x64\Release\DWSIM.exe`。
 - Windows 单文件包：`powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1`（需要 NSIS `makensis`）。

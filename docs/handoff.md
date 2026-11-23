@@ -155,7 +155,23 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
 
 ## 6. 在这台机器上验证
 
-macOS，Mono 6.12。必须 `/m:1`。`/m` 会在 `EnumProcesses` 处崩。
+macOS，Mono 6.12（6.12.0.206，MSBuild 16.10.1，NuGet 6.6.2.1）。必须 `/m:1`；
+`/m` 会在 `EnumProcesses` 处崩。
+
+桌面程序（Eto UI）本机构建：
+
+```bash
+cd /Volumes/SSD_exit/code_go/H2sim
+bash scripts/build-macos.sh               # Release -> DWSIM.UI.Desktop/bin/Release/
+CONFIG=Debug bash scripts/build-macos.sh  # Debug
+```
+
+脚本只构建 `DWSIM.UI.Desktop` 依赖图，跳过 WPF 工程、`licenses.licx` 和 Windows
+`xcopy` PostBuildEvent，复制 `PlatformFiles/Common` + `PlatformFiles/macOS`，再移除
+`ThermoCS` / ThermoC / ProFeatures。**不要**在本机直接 `msbuild DWSIM.sln`：sln 里
+有 WPF 工程。
+
+动力学测试（手动命令，脚本不覆盖）：
 
 ```bash
 cd /Volumes/SSD_exit/code_go/H2sim

@@ -134,6 +134,19 @@
 - 2026-11-23 复跑：`PASS`。ALK 314.15 K / 8.13 kg/s，PEM 310.74 K / 5.80 kg/s，
   `compression dynamic` 两行分别为 C-1 10.46 kW / C-2 9.45 kW（PEM）。
 
+## macOS 本地构建工具链（2026-11-23）
+
+- 环境：Mono `6.12.0.206`、MSBuild `16.10.1`、NuGet `6.6.2.1`，Apple Silicon。
+- `bash scripts/build-macos.sh`（Release）和 `CONFIG=Debug bash scripts/build-macos.sh`
+  均 **BUILD OK**，0 错误。`scripts/build.sh` 在 Darwin 上自动转给 `build-macos.sh`。
+- 产物：`DWSIM.UI.Desktop/bin/<Config>/DWSIM.UI.Desktop.exe`。`PlatformFiles/Common`
+  与 `PlatformFiles/macOS` 已复制到输出目录；`ThermoCS/`、ThermoC 程序集和
+  `DWSIM.ProFeatures.dll` 已移除。
+- 完整 `DWSIM.sln` 不在本机构建：sln 含 WPF 渲染器和两个 WPF Python 控制台，
+  Mono 没有 WPF。脚本只构建 `DWSIM.UI.Desktop` 的依赖图（AnyCPU），并跳过
+  `licenses.licx` 和 Windows `xcopy` PostBuildEvent。
+- 工具链补全不等于窗口能启动：Gate 0 V-3 仍失败，见下节。
+
 ## Gate 0 V-3 macOS 桌面启动（2026-11-23）
 
 - 本机：macOS 27.2.1（Apple Silicon），Mono Framework 6.12 已装。

@@ -3,6 +3,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# macOS 走专用脚本：完整 sln 会拉上 WPF 工程，且 PostBuildEvent 是 Windows xcopy。
+if [ "$(uname -s)" = "Darwin" ]; then
+  exec bash "$(dirname "$0")/build-macos.sh"
+fi
+
 CONFIG="${CONFIG:-Release}"
 PLATFORM="${PLATFORM:-x64}"
 
