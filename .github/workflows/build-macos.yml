@@ -26,7 +26,7 @@ jobs:
           export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
           mono --version | head -2
           msbuild -version | head -2
-          nuget help | head -2
+          nuget help 2>&1 | sed -n '1,2p'
 
       - name: Build macOS desktop
         shell: bash
