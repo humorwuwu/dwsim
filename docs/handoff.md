@@ -15,9 +15,10 @@
   - `T-4.1`：外部 UO 描述写入图形，模板重新生成
   - `ci`：4.6.1 devpack 安装重试
   - `docs`：0.3.0 CI 与安装包记录
-- Windows CI run `45109230393`（HEAD `54f045bd5`，含 devpack 重试）整轮 **success**；
-  Windows 单文件包在 `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MiB，
-  SHA-256 `71d84434…`）。
+- Windows CI run `45113895354`（HEAD `6eb00b613`，含 devpack 重试和打包安装冒烟）
+  整轮 **success**；Windows 单文件包在
+  `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MiB，
+  SHA-256 `edacc8a5…`）。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -129,11 +130,13 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
    `20.247.166.64` 是当前 `dig github.com` 的地址；失效时重新查。纯文档 commit 可带
    `[skip ci]` 避免再跑一轮。
 
-2. **Windows 安装包已按 0.3.0 构建。** 最新包来自 CI run `45109230393` 的
-   `h2sim-windows-package` artifact：`release/windows/H2sim-0.3.0-windows-x64.exe`
-   （195 MiB，SHA-256 `71d84434…`）。包内 3718 个文件，`DWSIM.exe` 的
-   `AssemblyVersion` 是 `0.3.0.0`，两个厂模板与仓库字节一致。还差一台干净的 Windows
-   机器做双击启动验证；本机 macOS 只能确认文件是 NSIS PE32。`release/` 不进 git。
+2. **Windows 安装包已按 0.3.0 构建并在 CI 里装过。** 最新包来自 CI run
+   `45113895354` 的 `h2sim-windows-package` artifact：
+   `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MiB，SHA-256 `edacc8a5…`）。
+   包内 3718 个文件，`DWSIM.exe` 的 `AssemblyVersion` 是 `0.3.0.0`，两个厂模板与
+   仓库字节一致。CI 的 **Smoke test the Windows package** 会 `/S` 静默安装到
+   `%LOCALAPPDATA%\H2sim\0.3.0`、检查 `DWSIM.exe` 与 `samples/`、再启动并存活 20 s。
+   还差一台干净的 Windows 机器做人工双击验证；`release/` 不进 git。
 
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。
 4. **LyeLoop 冷却模式未实现**（T-1.4）。当前只有 WaterFlow；R7 的变流量收益需要回路拓扑和曲线。
