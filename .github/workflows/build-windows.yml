@@ -78,6 +78,27 @@ jobs:
           path: release/windows/H2sim-*-windows-x64.exe
           if-no-files-found: error
 
+      - name: Smoke test the Windows package
+        if: matrix.Configuration == 'Release'
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $package = Get-ChildItem release\windows\H2sim-*-windows-x64.exe | Select-Object -First 1
+          if (-not $package) { throw "Windows package not found" }
+          Get-Process DWSIM -ErrorAction SilentlyContinue | Stop-Process -Force
+          $installer = Start-Process -FilePath $package.FullName -ArgumentList '/S' -PassThru
+          if (-not $installer.WaitForExit(120000)) { throw "installer did not exit within 120 s" }
+          $installDir = Join-Path $env:LOCALAPPDATA "H2sim\$version"
+          $installedExe = Join-Path $installDir 'DWSIM.exe'
+          if (-not (Test-Path $installedExe)) { throw "installed DWSIM.exe missing at $installedExe" }
+          $sample = Join-Path $installDir 'samples\PEM Electrolysis Plant.dwxmz'
+          if (-not (Test-Path $sample)) { throw "installed sample flowsheet missing at $sample" }
+          Start-Sleep -Seconds 20
+          $p = Get-Process DWSIM -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $p) { throw "installed DWSIM did not start" }
+          Write-Host "installed DWSIM started (pid $($p.Id)) from $installedExe"
+          Stop-Process -Id $p.Id -Force
+
       - name: Signal map tests
         if: matrix.Configuration == 'Release'
         shell: pwsh
