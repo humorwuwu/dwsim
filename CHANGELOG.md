@@ -2,6 +2,15 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.3.1] - 2026-11-23
+
+### Fixed
+
+- The electrolyzer report now lists every KPI from `GetProperties`, including
+  current density, the overpotentials, Faraday efficiency, gas purity, specific
+  energy, HHV/LHV efficiency, cooling duty, stack temperature and the interlock
+  flags. Purity properties also report their `%` unit.
+
 ## [0.3.0] - 2026-11-23
 
 ### Added
