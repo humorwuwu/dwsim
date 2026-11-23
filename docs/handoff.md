@@ -6,19 +6,20 @@
 
 - 仓库：`/Volumes/SSD_exit/code_go/H2sim`（外置 SSD；旧的 `/Users/wcx/ongoing/H2sim` 已不是工作副本）
 - 分支：`h2sim/phase-a`
-- 版本：`VERSION` = `0.3.0`，`CHANGELOG.md` 有对应的 0.3.0 节，所有 `AssemblyInfo` 已同步
+- 版本：`VERSION` = `0.3.1`，`CHANGELOG.md` 有对应的 0.3.1 节，所有 `AssemblyInfo` 已同步
 - 今天的工作已提交并推送（`origin/h2sim/phase-a`）：
   - `T-0.3`：非 Windows 构建 + macOS 打包脚本
   - `T-4.1`：阴极闪蒸 + 两级压缩断言 + ALK SEC 回归
   - `release 0.3.0`：版本与 `AssemblyInfo`
   - `docs`：macOS V-3 失败记录与交接
   - `T-4.1`：外部 UO 描述写入图形，模板重新生成
-  - `ci`：4.6.1 devpack 安装重试
-  - `docs`：0.3.0 CI 与安装包记录
-- Windows CI run `45113895354`（HEAD `6eb00b613`，含 devpack 重试和打包安装冒烟）
+  - `ci`：4.6.1 devpack 安装重试 + 安装包静默安装/启动冒烟
+  - `T-1.2`：电解槽报告输出全部 KPI，纯度补 `%` 单位
+  - `release 0.3.1`：版本与 `AssemblyInfo`
+- Windows CI run `45118882085`（HEAD `2b58eb194`，含 devpack 重试和安装冒烟）
   整轮 **success**；Windows 单文件包在
-  `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MiB，
-  SHA-256 `edacc8a5…`）。
+  `release/windows/H2sim-0.3.1-windows-x64.exe`（195 MiB，
+  SHA-256 `8c5bd493…`）。0.3.0 的包也还在同目录，留作回退。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -130,12 +131,13 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
    `20.247.166.64` 是当前 `dig github.com` 的地址；失效时重新查。纯文档 commit 可带
    `[skip ci]` 避免再跑一轮。
 
-2. **Windows 安装包已按 0.3.0 构建并在 CI 里装过。** 最新包来自 CI run
-   `45113895354` 的 `h2sim-windows-package` artifact：
-   `release/windows/H2sim-0.3.0-windows-x64.exe`（195 MiB，SHA-256 `edacc8a5…`）。
-   包内 3718 个文件，`DWSIM.exe` 的 `AssemblyVersion` 是 `0.3.0.0`，两个厂模板与
-   仓库字节一致。CI 的 **Smoke test the Windows package** 会 `/S` 静默安装到
-   `%LOCALAPPDATA%\H2sim\0.3.0`、检查 `DWSIM.exe` 与 `samples/`、再启动并存活 20 s。
+2. **Windows 安装包已按 0.3.1 构建并在 CI 里装过。** 最新包来自 CI run
+   `45118882085` 的 `h2sim-windows-package` artifact：
+   `release/windows/H2sim-0.3.1-windows-x64.exe`（195 MiB，SHA-256 `8c5bd493…`）。
+   包内 3718 个文件，`DWSIM.exe` 的 `AssemblyVersion` 是 `0.3.1.0`。
+
+   CI 的 **Smoke test the Windows package** 会 `/S` 静默安装到
+   `%LOCALAPPDATA%\H2sim\0.3.1`、检查 `DWSIM.exe` 与 `samples/`、再启动并存活 20 s。
    还差一台干净的 Windows 机器做人工双击验证；`release/` 不进 git。
 
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。

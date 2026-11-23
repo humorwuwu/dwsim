@@ -229,6 +229,16 @@
 - 阴极气液分离：饱和阴极气冷到 40 °C 后由 `V-GL` 闪蒸。本机实测冷凝掉约 85% 的水（ALK 0.235 / 0.278 mol/s，PEM 0.0314 / 0.0370 mol/s），干气再进纯化器。
 - 边界：两级压缩保持出口压力模式（90 bar、250 bar）和 75% 等熵效率，级间冷却器是 40 °C 定温；储罐动态是集总模型。动态步之后只要求轴功仍为正、规格不被改掉。级间冷却器的动态持液会改写级间流股压力，所以动态断言不要求流股压力仍等于规格。
 
+## 0.3.1 Windows CI（2026-11-23）
+
+- Run `45118882085`，HEAD `2b58eb194`；整轮 **success**（Debug/Release、
+  动态测试、模板生成、单文件打包、安装冒烟、OpenPLC 台架）。
+- 修复：电解槽 `GetReport` 输出全部 KPI，纯度属性补 `%` 单位；新增报告测试。
+- Windows 包：`release/windows/H2sim-0.3.1-windows-x64.exe`，CI 的
+  `h2sim-windows-package` artifact，安装冒烟已通过。
+  SHA-256：`8c5bd493a5720db4c071cad91b3dc9b6568e9c0f3879a10dc40d9198867a0573`。
+  包内 3718 个文件，`DWSIM.exe` 的 `AssemblyVersion` 为 `0.3.1.0`。
+
 ## 0.3.0 Windows CI（2026-11-23）
 
 - Run `45106985172`，HEAD `6bbded0c8`；整轮 **success**。
