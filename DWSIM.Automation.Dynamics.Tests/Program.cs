@@ -88,6 +88,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestSpecificEnergyConsumptionGoldenData();
             TestAlkalineConductivityGoldenData();
             TestAlkalinePolarizationGoldenData();
+            TestAlkalineSecGoldenData();
             TestThermalGoldenData();
             TestStackHeatLossShare();
             TestGasPurityRegression();
@@ -188,7 +189,10 @@ namespace DWSIM.Automation.Dynamics.Tests
             baseFlowsheet.AddObjectToSurface(ObjectType.External, 950, 20, "STO-1", "", storage, false);
             storage.CreateConnectors();
 
-            flowsheet.ConnectObjects(h2.GraphicObject, purification.GraphicObject, 0, 0);
+            // Cool the saturated cathode gas and flash it. Water leaves as liquid; the
+            // purifier then only has to take the remaining vapour down to the ppm target.
+            var dryH2 = AddCathodeFlash(flowsheet, h2);
+            flowsheet.ConnectObjects(dryH2.GraphicObject, purification.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(purification.GraphicObject, purifiedH2.GraphicObject, 0, 0);
             flowsheet.ConnectObjects(purification.GraphicObject, offGas.GraphicObject, 1, 0);
 
@@ -234,9 +238,38 @@ namespace DWSIM.Automation.Dynamics.Tests
         }
 
         /// <summary>
+        /// Cools the saturated cathode gas to 40 °C and flashes it. Outlet 0 of the vessel is
+        /// vapour, outlet 1 is liquid water.
+        /// </summary>
+        private static MaterialStream AddCathodeFlash(IFlowsheet flowsheet, MaterialStream cathode)
+        {
+            var cooled = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 490, 50, "H2-COOL");
+            var vapor = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 560, 30, "H2-DRY");
+            var liquid = (MaterialStream)flowsheet.AddObject(ObjectType.MaterialStream, 560, 110, "H2-COND");
+
+            var cooler = (Cooler)flowsheet.AddObject(ObjectType.Cooler, 470, 50, "E-GL");
+            cooler.CalcMode = Cooler.CalculationMode.OutletTemperature;
+            cooler.OutletTemperature = 313.15;
+            cooler.DeltaP = 0.0;
+
+            var separator = (Vessel)flowsheet.AddObject(ObjectType.Vessel, 530, 50, "V-GL");
+
+            flowsheet.ConnectObjects(cathode.GraphicObject, cooler.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(cooler.GraphicObject, cooled.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(cooled.GraphicObject, separator.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(separator.GraphicObject, vapor.GraphicObject, 0, 0);
+            flowsheet.ConnectObjects(separator.GraphicObject, liquid.GraphicObject, 1, 0);
+            return vapor;
+        }
+
+        /// <summary>
         /// Adds the compression train between the purified hydrogen and the storage inlet:
-        /// stage 1 (30 -> 90 bar), interstage cooler to 40 degC, knock-out vessel, stage 2
-        /// (90 -> 250 bar). Each stage has its own energy stream.
+        /// stage 1 to 90 bar, interstage cooler to 40 °C, knock-out vessel, stage 2 to 250 bar.
+        /// ALK enters near 15.5 bar and PEM near 29.5 bar; both discharge specifications are absolute.
+        /// Each stage stays in outlet-pressure mode. The steady solve writes shaft work to
+        /// <c>DeltaQ</c> and copies it to that stage's energy stream, and the saved templates keep
+        /// those values. Discharge pressure is the specification, so the generator does not change
+        /// the mode after the solve.
         /// </summary>
         private static void AddCompressionTrain(IFlowsheet flowsheet, DWSIM.FlowsheetBase.FlowsheetBase baseFlowsheet,
                                                 MaterialStream feed, MaterialStream product)
@@ -435,8 +468,24 @@ namespace DWSIM.Automation.Dynamics.Tests
                             Check(Math.Abs(streamO2inH2 - reportedO2inH2) < 1e-9 * Math.Max(1.0, reportedO2inH2) + 1e-12,
                                 string.Format(CultureInfo.InvariantCulture,
                                     "stream O2-in-H2 {0:E3} % matches the reported KPI {1:E3} %", streamO2inH2, reportedO2inH2));
+
+                            var condensate = flowsheet.SimulationObjects.Values
+                                .FirstOrDefault(o => o.GraphicObject != null && o.GraphicObject.Tag == "H2-COND") as MaterialStream;
+                            var dry = flowsheet.SimulationObjects.Values
+                                .FirstOrDefault(o => o.GraphicObject != null && o.GraphicObject.Tag == "H2-DRY") as MaterialStream;
+                            Check(condensate != null && dry != null, "cathode flash streams present: " + Path.GetFileName(file));
+                            if (condensate != null && dry != null)
+                            {
+                                var knockedOut = MolarFlow(condensate, "Water");
+                                var cathodeWater = MolarFlow(h2Stream, "Water");
+                                Console.WriteLine("flash {0}: cathode water={1:E3} mol/s, condensate={2:E3} mol/s, dry={3:E3} mol/s",
+                                    Path.GetFileName(file), cathodeWater, knockedOut, MolarFlow(dry, "Water"));
+                                Check(knockedOut > 1e-8 && knockedOut < cathodeWater,
+                                    "cathode flash condenses part of the saturated water: " + Path.GetFileName(file));
+                            }
                         }
 
+                        CheckCompressionTrain(flowsheet, Path.GetFileName(file), strict: true);
                         CheckComponentBalance(flowsheet, unit, Path.GetFileName(file));
                         CheckEnergyBalance(flowsheet, unit, Path.GetFileName(file));
                     }
@@ -476,6 +525,7 @@ namespace DWSIM.Automation.Dynamics.Tests
                                     Path.GetFileName(file), stackTemperature));
                             Check(coolantFlow != null && Convert.ToDouble(coolantFlow) > 0.0,
                                 "plant dynamics: coolant flow reached the thermal model: " + Path.GetFileName(file));
+                            CheckCompressionTrain(flowsheet, Path.GetFileName(file), strict: false);
                         }
                     }
                 }
@@ -484,6 +534,88 @@ namespace DWSIM.Automation.Dynamics.Tests
                     Check(false, "plant sample: " + Path.GetFileName(file) + ": " + ex.ToString());
                 }
             }
+        }
+
+        /// <summary>
+        /// Two-stage hydrogen compression: 90 bar then 250 bar, 75% isentropic, interstage cool to
+        /// 40 °C. Outlet pressure is the specification. Shaft work is a result of that specification,
+        /// stored on the compressor and on its energy stream. A dynamic step only has to keep the
+        /// setpoint and a positive shaft work; the cooler holdup may rewrite the interstage stream.
+        /// </summary>
+        private static void CheckCompressionTrain(IFlowsheet flowsheet, string file, bool strict)
+        {
+            var stage1 = FindByTag<Compressor>(flowsheet, "C-1");
+            var stage2 = FindByTag<Compressor>(flowsheet, "C-2");
+            var power1 = FindByTag<DWSIM.UnitOperations.Streams.EnergyStream>(flowsheet, "W-C1");
+            var power2 = FindByTag<DWSIM.UnitOperations.Streams.EnergyStream>(flowsheet, "W-C2");
+            var cooler = FindByTag<Cooler>(flowsheet, "E-1");
+            var purified = FindByTag<MaterialStream>(flowsheet, "H2-PURE");
+            var stage1Out = FindByTag<MaterialStream>(flowsheet, "H2-90BAR");
+            var stage2In = FindByTag<MaterialStream>(flowsheet, "H2-90BAR-DRY");
+            var cooled = FindByTag<MaterialStream>(flowsheet, "H2-90BAR-C");
+            var product = FindByTag<MaterialStream>(flowsheet, "H2-HP");
+
+            Check(stage1 != null && stage2 != null && power1 != null && power2 != null && cooler != null
+                  && purified != null && stage1Out != null && stage2In != null && cooled != null && product != null,
+                "compression train present: " + file);
+            if (stage1 == null || stage2 == null || power1 == null || power2 == null || cooler == null
+                || purified == null || stage1Out == null || stage2In == null || cooled == null || product == null)
+                return;
+
+            var phase = strict ? "steady" : "dynamic";
+            Console.WriteLine("compression {0} {1}: C-1 {2:F2} kW, C-2 {3:F2} kW",
+                phase, file, stage1.DeltaQ, stage2.DeltaQ);
+
+            CheckCompressorStage(stage1, power1, purified, stage1Out, 90.0 * 100000.0, file, "C-1", strict);
+            CheckCompressorStage(stage2, power2, stage2In, product, 250.0 * 100000.0, file, "C-2", strict);
+
+            if (!strict) return;
+
+            Check(Math.Abs(cooler.OutletTemperature.GetValueOrDefault() - 313.15) < 1e-6,
+                "interstage cooler setpoint is 40 C: " + file);
+            Check(Math.Abs(cooled.GetTemperature() - 313.15) < 0.05,
+                "interstage stream is at 40 C: " + file);
+            var massError = Math.Abs(purified.GetMassFlow() - product.GetMassFlow())
+                / Math.Max(purified.GetMassFlow(), 1e-12);
+            Check(massError < 1e-8, string.Format(CultureInfo.InvariantCulture,
+                "compression train conserves mass: {0} (gap {1:E3})", file, massError));
+        }
+
+        private static void CheckCompressorStage(Compressor stage, DWSIM.UnitOperations.Streams.EnergyStream power,
+                                                  MaterialStream inlet, MaterialStream outlet, double outletPressure,
+                                                  string file, string tag, bool strict)
+        {
+            Check(stage.CalcMode == Compressor.CalculationMode.OutletPressure,
+                tag + " stays in outlet-pressure mode: " + file);
+            Check(Math.Abs(stage.AdiabaticEfficiency - 75.0) < 1e-9,
+                tag + " isentropic efficiency is 75%: " + file);
+            Check(Math.Abs(stage.POut - outletPressure) < 1.0,
+                tag + " discharge specification: " + file);
+            Check(stage.DeltaQ > 1.0, string.Format(CultureInfo.InvariantCulture,
+                "{0} shaft work is positive: {1} {2:F3} kW", tag, file, stage.DeltaQ));
+
+            var reported = power.EnergyFlow.GetValueOrDefault();
+            var copied = Math.Abs(reported - stage.DeltaQ) / Math.Max(stage.DeltaQ, 1e-12);
+            Check(copied < 1e-6, string.Format(CultureInfo.InvariantCulture,
+                "{0} energy stream carries the shaft work: {1} {2:F3} kW vs {3:F3} kW",
+                tag, file, reported, stage.DeltaQ));
+
+            if (!strict) return;
+
+            var fromEnthalpy = inlet.GetMassFlow() * (outlet.GetMassEnthalpy() - inlet.GetMassEnthalpy());
+            var workError = Math.Abs(fromEnthalpy - stage.DeltaQ) / Math.Max(stage.DeltaQ, 1e-12);
+            Check(workError < 1e-6, string.Format(CultureInfo.InvariantCulture,
+                "{0} shaft work matches the enthalpy rise: {1} {2:F3} kW vs {3:F3} kW",
+                tag, file, fromEnthalpy, stage.DeltaQ));
+            var pressureError = Math.Abs(outlet.GetPressure() - outletPressure) / outletPressure;
+            Check(pressureError < 1e-6, string.Format(CultureInfo.InvariantCulture,
+                "{0} outlet is at the discharge pressure: {1} {2:F0} Pa", tag, file, outlet.GetPressure()));
+        }
+
+        private static T FindByTag<T>(IFlowsheet flowsheet, string tag) where T : class
+        {
+            return flowsheet.SimulationObjects.Values
+                .FirstOrDefault(o => o.GraphicObject != null && o.GraphicObject.Tag == tag) as T;
         }
 
         /// <summary>
@@ -1105,6 +1237,78 @@ namespace DWSIM.Automation.Dynamics.Tests
             var design = model.CellVoltage(0.4, 353.15, 16.0, 16.0).U_cell;
             Check(design > model.U_tn, string.Format(CultureInfo.InvariantCulture,
                 "alkaline design-point voltage {0:F3} V is above the thermoneutral {1:F3} V", design, model.U_tn));
+        }
+
+        /// <summary>
+        /// Alkaline specific energy at the same voltage envelope. The expected kWh/kg is the
+        /// envelope voltage converted by Faraday's law, so a voltage match with a broken
+        /// stoichiometry still fails.
+        /// </summary>
+        private static void TestAlkalineSecGoldenData()
+        {
+            var candidates = new[]
+            {
+                Path.Combine("electrolyzers", "alkaline_sec_reference.csv"),
+                Path.Combine("tests", "electrolyzers", "alkaline_sec_reference.csv")
+            };
+            var path = candidates.FirstOrDefault(File.Exists);
+            Check(path != null, "alkaline SEC fixture found");
+            if (path == null) return;
+
+            var electrolyzer = new AlkalineElectrolyzer();
+            var model = (ModelAlkaline_SemiEmpirical)electrolyzer.CreateElectrochemicalModel();
+            model.U_rev = 1.23;
+            model.U_tn = 1.48;
+            model.KOH_wt = electrolyzer.Parameters["KOH_wt"].Value;
+            model.a_act = electrolyzer.Parameters["a_act"].Value;
+            model.b_act = electrolyzer.Parameters["b_act"].Value;
+            model.AreaSpecificResistance = electrolyzer.Parameters["ASR"].Value;
+            model.i_L = electrolyzer.Parameters["i_L"].Value;
+            model.t_mem = electrolyzer.Parameters["t_mem"].Value;
+
+            var calculator = new ElectrolyzerCalculator
+            {
+                Model = model,
+                A_cell = electrolyzer.Parameters["A_cell"].Value,
+                N_cells = electrolyzer.Parameters["N_cells"].Value,
+                T = 353.15,
+                pCat = electrolyzer.Parameters["P_cat"].Value,
+                pAn = electrolyzer.Parameters["P_an"].Value,
+                etaF_ref = electrolyzer.Parameters["etaF_ref"].Value,
+                i_ref = electrolyzer.Parameters["i_ref"].Value
+            };
+
+            var rows = 0;
+            var worst = 0.0;
+            foreach (var raw in File.ReadLines(path))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("current_density_a_cm2,")) continue;
+
+                var parts = line.Split(',');
+                if (parts.Length != 3)
+                {
+                    Check(false, "invalid alkaline SEC fixture row: " + line);
+                    continue;
+                }
+
+                var currentDensity = double.Parse(parts[0], CultureInfo.InvariantCulture);
+                var expectedSec = double.Parse(parts[1], CultureInfo.InvariantCulture);
+                var tolerance = double.Parse(parts[2], CultureInfo.InvariantCulture);
+
+                var powerKW = calculator.PowerAt(currentDensity);
+                var actualSec = calculator.SpecificEnergyConsumption(powerKW, currentDensity);
+                var relativeError = Math.Abs(actualSec - expectedSec) / expectedSec;
+                rows++;
+                worst = Math.Max(worst, relativeError);
+                Check(relativeError <= tolerance,
+                    string.Format(CultureInfo.InvariantCulture,
+                        "alkaline SEC {0:F2} A/cm2: expected {1:F3} kWh/kg, got {2:F3} ({3:P2})",
+                        currentDensity, expectedSec, actualSec, relativeError));
+            }
+
+            Check(rows == 6, "alkaline SEC fixture has 6 points");
+            Console.WriteLine("alkaline SEC: {0} points, worst {1:P2}", rows, worst);
         }
 
         private static void TestThermalGoldenData()

@@ -1,0 +1,16 @@
+# Alkaline SEC anchors, 30 wt% KOH, 80 degC.
+# Not a digitized paper table. Each point converts the voltage in
+# alkaline_polarization_reference.csv through Faraday's law:
+#   etaF(i) = i / (i + i_cross), i_cross = (1/etaF_ref - 1) * i_ref
+#   etaF_ref = 0.99 at i_ref = 0.4 A/cm2 (AlkalineElectrolyzer defaults)
+#   SEC = U_cell * 2 * F / (etaF * M_H2 * 3.6e6), F = 96485.3365, M_H2 = 0.002016 kg/mol
+# SEC does not depend on cell area or cell count. Tolerances match the voltage envelope.
+# Replace both files together when a primary-source polarization curve is digitized.
+# Columns: current_density_a_cm2,sec_kwh_per_kg,relative_tolerance
+current_density_a_cm2,sec_kwh_per_kg,relative_tolerance
+0.10,42.325,0.06
+0.20,44.487,0.05
+0.30,45.810,0.05
+0.40,47.806,0.04
+0.50,49.587,0.04
+0.60,51.394,0.04
