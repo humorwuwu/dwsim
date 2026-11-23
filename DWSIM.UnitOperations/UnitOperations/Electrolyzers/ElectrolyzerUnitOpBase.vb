@@ -217,6 +217,8 @@ Namespace UnitOperations
                     Return "A"
                 Case "Current Density"
                     Return "A/cm2"
+                Case "H2 Purity", "H2 in O2", "O2 in H2"
+                    Return "%"
                 Case "Power", "Cooling Duty"
                     Return "kW"
                 Case "Specific Energy Consumption"
@@ -778,7 +780,26 @@ Namespace UnitOperations
             sb.AppendLine(String.Format(ci, "Cell voltage: {0} V", CellVoltage.ToString(nf, ci)))
             sb.AppendLine(String.Format(ci, "Stack voltage: {0} V", StackVoltage.ToString(nf, ci)))
             sb.AppendLine(String.Format(ci, "Current: {0} A", Current.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Current density: {0} A/cm2", CurrentDensity.ToString(nf, ci)))
             sb.AppendLine(String.Format(ci, "Power: {0} kW", Power.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Reversible voltage: {0} V", ReversibleVoltage.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Thermoneutral voltage: {0} V", ThermoneutralVoltage.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Activation overpotential: {0} V", ActivationOverpotential.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Ohmic overpotential: {0} V", OhmicOverpotential.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Concentration overpotential: {0} V", ConcentrationOverpotential.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Faraday efficiency: {0}", FaradayEfficiency.ToString("P2", ci)))
+            sb.AppendLine(String.Format(ci, "H2 purity: {0} %", H2Purity.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "H2 in O2: {0} %", H2inO2.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "O2 in H2: {0} %", O2inH2.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Specific energy consumption: {0} kWh/kg", SpecificEnergyConsumption.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Efficiency (HHV): {0}", EfficiencyHHV.ToString("P2", ci)))
+            sb.AppendLine(String.Format(ci, "Efficiency (LHV): {0}", EfficiencyLHV.ToString("P2", ci)))
+            sb.AppendLine(String.Format(ci, "Cooling duty: {0} kW", CoolingDuty.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "Stack temperature: {0} K", StackTemperature.ToString(nf, ci)))
+            sb.AppendLine(String.Format(ci, "H2-in-O2 high alarm: {0}", If(H2inO2HighAlarm, "Yes", "No")))
+            sb.AppendLine(String.Format(ci, "O2-in-H2 high alarm: {0}", If(O2inH2HighAlarm, "Yes", "No")))
+            sb.AppendLine(String.Format(ci, "Stack temperature high alarm: {0}", If(StackTemperatureHighAlarm, "Yes", "No")))
+            sb.AppendLine(String.Format(ci, "Trip latched: {0}", If(TripLatched, "Yes", "No")))
 
             Return sb.ToString()
 

@@ -96,6 +96,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestFaradayEfficiency();
             TestInterlocks();
             TestDynamicSupport();
+            TestElectrolyzerReport();
             TestDynamicSamples();
             TestDynamicBaseline();
             TestPlantSamples();
@@ -812,6 +813,32 @@ namespace DWSIM.Automation.Dynamics.Tests
 
             var cooled = pem.IntegrateStackTemperature(353.15, 60.0, 0.0, 1.0, 4180.0, 298.15, 298.15);
             Check(cooled < 353.15 && cooled > 298.15, "stack cools down");
+        }
+
+        /// <summary>
+        /// T-1.2 step 8: the report exposes the same KPIs as GetProperties, and the
+        /// percentage/fraction units show up in the unit lookup.
+        /// </summary>
+        private static void TestElectrolyzerReport()
+        {
+            var unit = new PEMElectrolyzer();
+            var report = unit.GetReport(null, CultureInfo.InvariantCulture, "F4");
+            foreach (var label in new[]
+            {
+                "Current density", "Reversible voltage", "Thermoneutral voltage",
+                "Activation overpotential", "Ohmic overpotential", "Concentration overpotential",
+                "Faraday efficiency", "H2 purity", "H2 in O2", "O2 in H2",
+                "Specific energy consumption", "Efficiency (HHV)", "Efficiency (LHV)",
+                "Cooling duty", "Stack temperature", "Trip latched"
+            })
+            {
+                Check(report.Contains(label), "electrolyzer report contains: " + label);
+            }
+
+            Check(unit.GetPropertyUnit("H2 Purity") == "%", "H2 purity unit is percent");
+            Check(unit.GetPropertyUnit("H2 in O2") == "%", "H2-in-O2 unit is percent");
+            Check(unit.GetPropertyUnit("O2 in H2") == "%", "O2-in-H2 unit is percent");
+            Check(unit.GetPropertyUnit("Faraday Efficiency") == "", "Faraday efficiency is a fraction");
         }
 
         /// <summary>
