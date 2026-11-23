@@ -15,5 +15,6 @@
 - OPC UA 包从计划里的 1.5.374.54 改为 **1.4.371.96**：前者只有 net48/netstandard2.1，net462 无法引用；1.4.371.96 有 net462 资产。None/Anonymous 已通过 mock server 和 OpenPLC v4 官方 server manager 探针；`Basic256Sha256` + Username、断线重连和权限不足场景未测。
 - `Microsoft.Bcl.HashCode` 在 Mono/MSBuild 里可能报 MSB3245（引用未解析）；Windows CI 现在会在打包前显式复制 HashCode、System.Buffers 和 System.Memory 到 `DistPackages`。Io 测试宿主也带有这些程序集的 binding redirect。
 - 本地 Mono 构建：`Directory.Build.targets` 为非 Windows 构建提供 netstandard facade、HintPath 反斜杠归一化，并跳过 WPF 渲染器、两个 WPF Python 控制台和 `licenses.licx`。`DWSIM.Automation.Dynamics.Tests` 可在本机编过并跑通。macOS 桌面失败在 Xamarin.Mac 运行时，不是 Mono 版本：`Eto.XamMac2` 调用的 `_ThreadPoolWaitCallback.SetDispatcher` 只有 Xamarin.Mac 自带的 Mono 才有；另外 `Eto.Forms 2.8.3` 的 netstandard2.0 资产缺少 `Eto.IO.SystemIcons/IHandler`，与 XamMac2 2.8.2 不配套。详见 `docs/verification.md` 的 Gate 0 V-3。macOS 构建里没有 WPF 渲染器、交互式 IronPython 控制台和定位按钮。
-- T-3.1 的两个 UI 窗体已接线并通过编译；暂停/续跑、单步前进/后退和 6 个动态样例的 UI 行为还没有 Windows 桌面实测，回归基准也未采集。
+- T-3.1 的两个 UI 窗体已接线并通过编译；暂停/续跑、单步前进/后退和 6 个动态样例的 UI 行为还没有 Windows 桌面实测；数值基准已采集（`tests/dynamic/samples_baseline.csv`）。
+- T-1.4 的 `LyeLoop` 冷却模式（碱液循环 + 板换、变流量）尚未实现；当前只有 `WaterFlow`，即从连接流取流量和进口温度。R7 的 8–12% 变流量收益需要原始曲线和回路拓扑后再做，不编造。
 - `Dynamic Simulation - PFR.dwxmz` 上游原样保存的 `CatalystVoidFraction=0`、`CatalystLoading=0` 会让停留时间为 0，动态运行必然报 `PFR-001`；该样例数据已在 T-3.1 修正。`RunOptions.StepSeconds` 现在也会传给积分器，调用方可以按需指定更小的步长。
