@@ -1,0 +1,71 @@
+name: probe-macos-gtk3
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    # x64 runner: Mono 6.12 and Homebrew GTK3 must both be x86_64.
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Mono 6.12
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/mono.pkg" \
+            "https://download.mono-project.com/archive/6.12.0/macos-10-universal/MonoFramework-MDK-6.12.0.206.macos10.xamarin.universal.pkg"
+          sudo installer -pkg "$RUNNER_TEMP/mono.pkg" -target /
+
+      - name: Build macOS desktop
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          bash scripts/build-macos.sh
+
+      - name: Install GTK3
+        shell: bash
+        run: |
+          brew install gtk+3 gtksourceview3
+
+      - name: Force the Gtk3 renderer
+        shell: bash
+        run: |
+          for dir in "$HOME/Documents/DWSIM Application Data" \
+                     "$HOME/Documents/Documents/DWSIM Application Data"; do
+            mkdir -p "$dir"
+            printf '[PlatformRenderers]\nMac=Gtk3\n' > "$dir/dwsim_newui.ini"
+          done
+
+      - name: Start DWSIM with GTK3
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          export DYLD_LIBRARY_PATH="/usr/local/lib:${DYLD_LIBRARY_PATH:-}"
+          export GTK_DATA_PREFIX="/usr/local"
+          export XDG_DATA_DIRS="/usr/local/share:${XDG_DATA_DIRS:-}"
+          cd DWSIM.UI.Desktop/bin/Release
+          mono DWSIM.UI.Desktop.exe > "$RUNNER_TEMP/gtk3.log" 2>&1 &
+          pid=$!
+          echo "$pid" > "$RUNNER_TEMP/gtk3.pid"
+          sleep 30
+          if kill -0 "$pid" 2>/dev/null; then
+            echo "GTK3 PROBE: process alive after 30 s"
+          else
+            echo "GTK3 PROBE: process exited"
+          fi
+          screencapture -x "$RUNNER_TEMP/gtk3.png" || true
+          kill "$pid" 2>/dev/null || true
+          sleep 2
+          tail -80 "$RUNNER_TEMP/gtk3.log"
+
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-gtk3-probe
+          path: |
+            ${{ runner.temp }}/gtk3.log
+            ${{ runner.temp }}/gtk3.png
+          if-no-files-found: warn
