@@ -20,10 +20,11 @@
   整轮 **success**；Windows 单文件包在
   `release/windows/H2sim-0.3.1-windows-x64.exe`（195 MiB，
   SHA-256 `8c5bd493…`）。0.3.0 的包也还在同目录，留作回退。
-- macOS 本地：`bash scripts/build-macos.sh`（Release/Debug）BUILD OK；
-  `bash scripts/package-macos.sh` 已产出
-  `release/macos/H2sim-0.3.1-macos-x64.dmg`（168 MB，SHA-256 `bf2718a0…`），
-  但 **不能启动**（Gate 0 V-3 仍是 Xamarin.Mac 运行时缺失）。
+- macOS：本机 `bash scripts/build-macos.sh`（Release/Debug）BUILD OK；
+  GitHub `build-macos` workflow 在 `macos-15-intel` 上装 Mono 6.12、打出 dmg
+  并跑完动力学测试 **PASS**（run `45147715488`）。当前
+  `release/macos/H2sim-0.3.1-macos-x64.dmg` 来自 CI（166 MB，
+  SHA-256 `10367bf2…`），但 **不能启动**（Gate 0 V-3 仍是 Xamarin.Mac 运行时缺失）。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -147,8 +148,9 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。
 4. **LyeLoop 冷却模式未实现**（T-1.4）。当前只有 WaterFlow；R7 的变流量收益需要回路拓扑和曲线。
 5. **macOS 桌面要么走 GTK3，要么迁 .NET 8。** 本地编译和 dmg 打包已经补全
-   （`scripts/build-macos.sh`、`scripts/package-macos.sh`），只差运行时：
-   `Eto.XamMac2` 要 Xamarin.Mac 自带的 Mono，系统 Mono 6.12 没有
+   （`scripts/build-macos.sh`、`scripts/package-macos.sh`），GitHub
+   `build-macos` workflow 也能在 `macos-15-intel` 上构建并跑完动力学测试。
+   只差运行时：`Eto.XamMac2` 要 Xamarin.Mac 自带的 Mono，系统 Mono 6.12 没有
    `_ThreadPoolWaitCallback.SetDispatcher`。GTK3 需要 **x86_64** GTK3：Homebrew 在
    Apple Silicon 上装的是 arm64（`/opt/homebrew/lib/libgtk-3.0.dylib`），x86_64 的
    Mono 进程加载不了。可选 Rosetta 前缀（`/usr/local`）另装一套，或用 gtk-osx 的

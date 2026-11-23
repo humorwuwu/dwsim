@@ -153,6 +153,19 @@
   包内有 `DWSIM.UI.Desktop.exe`、`Xamarin.Mac.dll` 和两个厂模板；不含
   `ThermoCS/`、ThermoC、ProFeatures。**仍然不能启动**，不要当发行物。
 
+## macOS GitHub Actions 构建（2026-11-23）
+
+- Workflow：`.github/workflows/build-macos.yml`，`macos-15-intel`（x64）。
+- Run `45147715488`，HEAD `3db5d40c1`；整轮 **success**。
+- 步骤：安装 Mono 6.12 MDK → `scripts/build-macos.sh` → `scripts/package-macos.sh`
+  → 上传 `h2sim-macos-dmg` → `scripts/test-macos.sh`。
+- 动力学测试在 runner 上末行 **PASS**（约 14 分钟，包含 ALK SEC、阴极闪蒸、
+  两级压缩稳态/动态断言）。
+- CI dmg：`release/macos/H2sim-0.3.1-macos-x64.dmg`（166 MiB，SHA-256
+  `10367bf2…`）。包内 `DWSIM.UI.Desktop.exe` 版本 `0.3.1.0`，含两个厂模板，
+  不含 ThermoC/ProFeatures。
+- **仍然不能启动**：Gate 0 V-3 未解决，dmg 不是可用发行版。
+
 ## Gate 0 V-3 macOS 桌面启动（2026-11-23）
 
 - 本机：macOS 27.2.1（Apple Silicon），Mono Framework 6.12 已装。

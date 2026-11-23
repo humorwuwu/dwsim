@@ -49,6 +49,9 @@ WPF 渲染器和两个 WPF Python 控制台。桌面窗口能否启动仍受 Gat
   `DWSIM.ProFeatures.dll`。产物：`DWSIM.UI.Desktop/bin/<Config>/DWSIM.UI.Desktop.exe`。
   动力学测试：`bash scripts/test-macos.sh`（参数会传给测试程序，例如
   `--generate-samples "PlatformFiles/Common/samples"`）。
+- macOS CI：`.github/workflows/build-macos.yml`，`macos-15-intel` runner 安装
+  Mono 6.12，跑 `build-macos.sh` / `package-macos.sh` / `test-macos.sh` 并上传 dmg。
+  窗口仍不能启动（Gate 0 V-3）。
 
 - 构建产物：`DWSIM\bin\x64\Release\DWSIM.exe`。
 - Windows 单文件包：`powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1`（需要 NSIS `makensis`）。

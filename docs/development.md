@@ -6,6 +6,7 @@
 |---|---|
 | 构建 | Windows x64 + Visual Studio 2022 Build Tools（MSBuild、.NET Framework 4.6.2 targeting pack）+ NuGet |
 | CI | GitHub Actions `windows-latest`（`.github/workflows/build-windows.yml`），push 触发 |
+| CI（macOS） | GitHub Actions `macos-15-intel`（`.github/workflows/build-macos.yml`），装 Mono 6.12，构建 dmg 并跑动力学测试 |
 | 运行（macOS） | Apple Silicon + Rosetta 2（已安装）；Gate 0 V-3 失败，桌面窗口仍起不来，见 `docs/gate0-report.md` |
 | 本机 macOS | Mono 6.12 Framework MDK（`mono` / `msbuild` / `nuget`），可本地编译桌面程序和动力学测试；完整 `DWSIM.sln` 因 WPF 工程不可构建 |
 
@@ -79,8 +80,9 @@ bash scripts/package-macos.sh
 
 - 前置：先 `bash scripts/build-macos.sh`，`DWSIM.UI.Desktop/bin/Release/DWSIM.UI.Desktop.exe` 存在。
 - 产物：`release/macos/H2sim-<version>-macos-x64.dmg`，内含 `H2sim.app`。
-- 本机已用 0.3.1 跑通：`release/macos/H2sim-0.3.1-macos-x64.dmg`（168 MB，
-  SHA-256 `bf2718a0…`）。
+- 0.3.1 已在本机和 GitHub `macos-15-intel` runner 打出；当前
+  `release/macos/H2sim-0.3.1-macos-x64.dmg` 来自 CI（166 MB，
+  SHA-256 `10367bf2…`）。
 - 主程序是 x86_64，Apple Silicon 上由 Rosetta 运行。
 - 启动器读取 `/Library/Frameworks/Mono.framework`（Mono 6.12）。没有安装时，打开 app 会提示先装 Mono。
 - 包内不含 `ThermoCS/`（i386）、ThermoC 程序集/配置和 `DWSIM.ProFeatures.dll`。
