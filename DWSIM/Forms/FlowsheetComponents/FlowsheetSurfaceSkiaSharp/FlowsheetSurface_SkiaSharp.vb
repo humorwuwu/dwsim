@@ -10,7 +10,9 @@ Imports SkiaSharp
 Imports DWSIM.Thermodynamics.BaseClasses
 Imports DWSIM.SharedClassesCSharp.FilePicker
 Imports DWSIM.Interfaces
+#If Not H2SIM_NO_WPF Then
 Imports System.Device.Location
+#End If
 Imports System.Text.RegularExpressions
 
 Public Class FlowsheetSurface_SkiaSharp
@@ -3991,7 +3993,8 @@ Public Class FlowsheetSurface_SkiaSharp
     End Sub
 
     Private Sub btnGetLocation_Click(sender As Object, e As EventArgs) Handles btnGetLocation.Click
-
+#If Not H2SIM_NO_WPF Then
+        ' Mono has no System.Device.
         Dim watcher As New GeoCoordinateWatcher()
 
         AddHandler watcher.PositionChanged, Sub(s2, e2)
@@ -4015,7 +4018,7 @@ Public Class FlowsheetSurface_SkiaSharp
                                             End Sub
 
         watcher.TryStart(False, TimeSpan.FromSeconds(10))
-
+#End If
     End Sub
 
     Private Sub tbAmbientTemperature_TextChanged(sender As Object, e As EventArgs) Handles tbAmbientTemperature.TextChanged

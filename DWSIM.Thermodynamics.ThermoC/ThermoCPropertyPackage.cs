@@ -95,6 +95,14 @@ namespace DWSIM.Thermodynamics.ThermoC
         {
             _packagetype = PackageType.EOS;
 
+            // The shipped ThermoCS binaries are Mach-O i386. Rosetta runs x86_64 only,
+            // so this package cannot be constructed on macOS.
+            if (ThermoCS.PlatformCheck.RunningPlatform() == ThermoCS.PlatformCheck.Platform.Mac)
+            {
+                throw new PlatformNotSupportedException(
+                    "ThermoC is not available on macOS. Its native libraries are 32-bit and cannot run under Rosetta. Use Peng-Robinson, NRTL, or Raoult's Law.");
+            }
+
             //check if the correct platform files are in place
             bool is64 = true;
 

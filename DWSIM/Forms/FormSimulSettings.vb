@@ -1678,10 +1678,12 @@ Public Class FormSimulSettings
 
         pp.DisplayAdvancedEditingForm()
 
+#If Not H2SIM_NO_WPF Then
         'start dispatcher for WPF Interop
         If Not GlobalSettings.Settings.IsRunningOnMono Then
             System.Windows.Threading.Dispatcher.Run()
         End If
+#End If
 
     End Sub
 

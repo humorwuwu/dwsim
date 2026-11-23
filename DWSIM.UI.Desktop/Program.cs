@@ -65,6 +65,7 @@ namespace DWSIM.UI.Desktop
                             platform.Add<Eto.OxyPlot.Plot.IHandler>(() => new Eto.OxyPlot.WinForms.PlotHandler());
                             platform.Add<Eto.Forms.Controls.Scintilla.Shared.ScintillaControl.IScintillaControl>(() => new Eto.Forms.Controls.Scintilla.WinForms.ScintillaControlHandler());
                             break;
+#if !H2SIM_NO_WPF
                         case Settings.WindowsPlatformRenderer.WPF:
                             DWSIM.UI.Desktop.WPF.StyleSetter.SetTheme("aero", "normalcolor");
                             DWSIM.UI.Desktop.WPF.StyleSetter.SetStyles();
@@ -73,6 +74,7 @@ namespace DWSIM.UI.Desktop
                             platform.Add<Eto.OxyPlot.Plot.IHandler>(() => new Eto.OxyPlot.WPF2.PlotHandler());
                             platform.Add<Eto.Forms.Controls.Scintilla.Shared.ScintillaControl.IScintillaControl>(() => new Eto.Forms.Controls.Scintilla.WPF.ScintillaControlHandler());
                             break;
+#endif
                         case Settings.WindowsPlatformRenderer.Gtk2:
                         case Settings.WindowsPlatformRenderer.Gtk3:
                             GlobalSettings.Settings.IsGTKRenderer = true;
@@ -126,6 +128,11 @@ namespace DWSIM.UI.Desktop
                 }
                 else if (Settings.RunningPlatform() == Settings.Platform.Mac)
                 {
+                    if (!File.Exists("/usr/local/gfortran/lib/libgfortran.3.dylib")
+                        || !File.Exists("/usr/local/gfortran/lib/libquadmath.0.dylib"))
+                    {
+                        Console.WriteLine("IPOPT is unavailable. Install gfortran (brew install gcc) if you need the IPOPT optimizer. The rest of H2sim runs without it.");
+                    }
                     if (GlobalSettings.Settings.AutomationMode)
                     {
                         DWSIM.UI.Desktop.GTK3.StyleSetter.SetStyles();

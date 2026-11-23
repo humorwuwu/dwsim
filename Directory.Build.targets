@@ -7,6 +7,54 @@
     </Reference>
   </ItemGroup>
 
+  <!--
+    Mono has no WPF. Drop the WPF renderer and the two WPF Python consoles
+    on non-Windows so Automation.Dynamics.Tests can compile. Windows keeps
+    every reference. H2SIM_NO_WPF is undefined there, so the #if stays on.
+  -->
+  <!-- AssignProjectConfiguration copies ProjectReference before ResolveProjectReferences. Remove first. -->
+  <Target Name="H2simDropWpfProjects" BeforeTargets="AssignProjectConfiguration" Condition="'$(OS)' != 'Windows_NT'">
+    <ItemGroup>
+      <_H2simWpfProject Include="@(ProjectReference)"
+        Condition="$([System.String]::Copy('%(Identity)').Contains('DWSIM.UI.Desktop.WPF')) Or $([System.String]::Copy('%(Identity)').Contains('IronPythonConsole')) Or $([System.String]::Copy('%(Identity)').Contains('PythonConsole'))" />
+      <ProjectReference Remove="@(_H2simWpfProject)" />
+      <Compile Remove="@(Compile)"
+        Condition="$([System.String]::Copy('%(Identity)').Contains('FormInteractiveIronPythonConsole'))" />
+      <EmbeddedResource Remove="@(EmbeddedResource)"
+        Condition="$([System.String]::Copy('%(Identity)').Contains('FormInteractiveIronPythonConsole'))" />
+    </ItemGroup>
+    <Message Importance="high" Text="H2sim: skipping WPF project %(_H2simWpfProject.Identity)" Condition="'@(_H2simWpfProject)' != ''" />
+  </Target>
+
+  <Target Name="H2simDropWpfBuiltProjects" BeforeTargets="ResolveProjectReferences" Condition="'$(OS)' != 'Windows_NT'">
+    <ItemGroup>
+      <ProjectReferenceWithConfiguration Remove="@(ProjectReferenceWithConfiguration)"
+        Condition="$([System.String]::Copy('%(Identity)').Contains('DWSIM.UI.Desktop.WPF')) Or $([System.String]::Copy('%(Identity)').Contains('IronPythonConsole')) Or $([System.String]::Copy('%(Identity)').Contains('PythonConsole'))" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="H2simDropWpfReferences" BeforeTargets="ResolveAssemblyReferences" Condition="'$(OS)' != 'Windows_NT'">
+    <ItemGroup>
+      <Reference Remove="@(Reference)"
+        Condition="$([System.String]::Copy('%(Identity)').StartsWith('Presentation')) Or $([System.String]::Copy('%(Identity)').StartsWith('WindowsBase')) Or $([System.String]::Copy('%(Identity)').StartsWith('WindowsFormsIntegration')) Or $([System.String]::Copy('%(Identity)').StartsWith('System.Xaml')) Or $([System.String]::Copy('%(Identity)').Contains('Wpf')) Or $([System.String]::Copy('%(Identity)').Contains('WPF'))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Mono's lc.exe exits 1 on WinForms licenses.licx. Drop them before SplitResourcesByCulture copies them to _LicxFile. -->
+  <Target Name="H2simSkipLicx" BeforeTargets="SplitResourcesByCulture" Condition="'$(OS)' != 'Windows_NT'">
+    <ItemGroup>
+      <EmbeddedResource Remove="@(EmbeddedResource)" Condition="'%(Extension)' == '.licx'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="H2simNoWpfDefine" BeforeTargets="CoreCompile" Condition="'$(OS)' != 'Windows_NT'">
+    <PropertyGroup>
+      <DefineConstants Condition="'$(Language)' == 'C#'">$(DefineConstants);H2SIM_NO_WPF</DefineConstants>
+      <!-- VB reads FinalDefineConstants, which is snapshotted from DefineConstants at evaluation. -->
+      <FinalDefineConstants Condition="'$(Language)' == 'VB'">$(FinalDefineConstants),H2SIM_NO_WPF=True</FinalDefineConstants>
+    </PropertyGroup>
+  </Target>
+
   <!-- Local Mono builds need the backslash HintPaths normalized. -->
   <Target Name="H2simNormalizeHintPaths" BeforeTargets="ResolveAssemblyReferences" Condition="'$(OS)' != 'Windows_NT'">
     <Message Importance="high" Text="H2sim: normalizing HintPaths for Mono" />

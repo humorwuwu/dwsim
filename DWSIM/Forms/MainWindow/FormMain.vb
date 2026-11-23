@@ -611,9 +611,11 @@ Public Class FormMain
             End If
 
             Try
+#If Not H2SIM_NO_WPF Then
                 If Eto.Forms.Application.Instance.Platform.IsWpf Then
                     System.Windows.Threading.Dispatcher.CurrentDispatcher.InvokeShutdown()
                 End If
+#End If
             Catch ex As Exception
             End Try
 

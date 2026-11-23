@@ -14,7 +14,9 @@ Imports IronPython.Hosting
 Imports DWSIM.Interfaces
 Imports DWSIM.SharedClassesCSharp.FilePicker
 Imports Microsoft.Scripting.Utils
+#If Not H2SIM_NO_WPF Then
 Imports PythonConsoleControl
+#End If
 
 <System.Serializable()> Public Class FormScript
 

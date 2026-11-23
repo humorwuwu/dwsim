@@ -16,7 +16,6 @@ using DWSIM.ExtensionMethods;
 using System.IO;
 
 using s = DWSIM.GlobalSettings.Settings;
-using System.Windows.Threading;
 
 namespace DWSIM.UI.Desktop.Editors
 {

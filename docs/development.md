@@ -56,11 +56,23 @@ powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 - 依赖 NSIS（`makensis`）；CI 的 `windows-latest` 已带，缺失时用 `choco install nsis`。
 - 产物：`release/windows/H2sim-<version>-windows-x64.exe`。
 - 首次运行时自解压到 `%LOCALAPPDATA%\H2sim\<version>`，然后启动 `DWSIM.exe`。
-- macOS `.dmg` 暂不产出：Gate 0 V-3（x86_64 Mono）尚未验证。
+
+## 打包（macOS）
+
+```sh
+bash scripts/package-macos.sh
+```
+
+- 前置：`DWSIM.UI.Desktop/bin/Release/DWSIM.UI.Desktop.exe` 已构建。
+- 产物：`release/macos/H2sim-<version>-macos-x64.dmg`，内含 `H2sim.app`。
+- 主程序是 x86_64，Apple Silicon 上由 Rosetta 运行。
+- 启动器读取 `/Library/Frameworks/Mono.framework`（Mono 6.12）。没有安装时，打开 app 会提示先装 Mono。
+- 包内不含 `ThermoCS/`（i386）和 `DWSIM.ProFeatures.dll`。
+- 未签名未公证。Gate 0 V-3（窗口能起来）要在装好 Mono 之后才能算通过。
 
 ## macOS 说明
 
-- macOS 版计划走**全进程 Rosetta**（方案 M1）；产物按 `macos-x64` 命名。
+- macOS 版走**全进程 Rosetta**（方案 M1）；产物按 `macos-x64` 命名。打包命令见上面的「打包（macOS）」。
 - `PlatformFiles/macOS/ThermoCS/*` 是 **Mach-O i386**，Apple Silicon 无法执行；官方样例不依赖 ThermoC，macOS 包不打包该目录（T-0.3.2）。
 - `libipopt.dylib` 依赖 `/usr/local/gfortran/lib/libgfortran.3.dylib` 和 `libquadmath.0.dylib`；Rosetta 下需 `brew install gcc` 提供，缺失时只应提示「IPOPT 不可用」（T-0.3.3）。
 - `DWSIM.ProFeatures.dll` 只被经典 WinForms UI 引用，macOS 包不含。
