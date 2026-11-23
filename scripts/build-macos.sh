@@ -82,4 +82,4 @@ rm -f "$OUT/DWSIM.Thermodynamics.ThermoC.dll" "$OUT/DWSIM.Thermodynamics.ThermoC
 echo
 echo "BUILD OK: $EXE"
 echo "数据文件已复制到 ${OUT}（不含 ThermoCS / ProFeatures）。"
-echo "注意：窗口启动仍受 Gate 0 V-3 限制；动力学测试可用 docs/handoff.md 的命令单独构建。"
+echo "注意：Eto XamMac2 启动器不可用；GTK3 版需要 x86_64 GTK3，见 docs/verification.md。"

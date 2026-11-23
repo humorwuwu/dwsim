@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 # 打 macOS 包：release/macos/H2sim-<version>-macos-x64.dmg
-# 里面是一个走 Rosetta 的 .app。Eto 的启动器只认
-# /Library/Frameworks/Mono.framework（Mono 6.12）。
+# 走 GTK3 + Mono 6.12（x86_64）。Eto 的 XamMac2 启动器已确认不可用。
+# 运行目标机需要 x86_64 的 GTK3（Intel Homebrew 的 /usr/local）。
 # 不打包 ThermoCS（i386）和 DWSIM.ProFeatures.dll。
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="$(tr -d '[:space:]' < VERSION)"
 SRC="DWSIM.UI.Desktop/bin/Release"
-LAUNCHER="packages/Eto.Platform.XamMac2.2.8.2/build/Launcher64"
 ICON="packages/Eto.Platform.XamMac2.2.8.2/build/Icon.icns"
 
 if [[ ! -f "$SRC/DWSIM.UI.Desktop.exe" ]]; then
   echo "缺少 $SRC/DWSIM.UI.Desktop.exe。先在本机构建 DWSIM.UI.Desktop（Release）。" >&2
-  exit 1
-fi
-if [[ ! -f "$LAUNCHER" ]]; then
-  echo "缺少 Eto Mac 启动器：$LAUNCHER" >&2
   exit 1
 fi
 if [[ ! -f "DWSIM/References/Xamarin.Mac.dll" ]]; then
@@ -31,9 +26,7 @@ BUNDLE="$APP/Contents/MonoBundle"
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$BUNDLE"
 
-# 启动器是 x86_64。外壳先确认 Rosetta 和 Mono，再交给它。
-cp "$LAUNCHER" "$APP/Contents/MacOS/H2sim.bin"
-chmod +x "$APP/Contents/MacOS/H2sim.bin"
+# GTK3 外壳：确认 Rosetta、Mono 和 x86_64 GTK3，然后用 mono 直接启动。
 cat > "$APP/Contents/MacOS/H2sim" << 'EOF'
 #!/bin/bash
 set -euo pipefail
@@ -41,12 +34,23 @@ if ! arch -x86_64 /usr/bin/true >/dev/null 2>&1; then
   osascript -e 'display dialog "H2sim 需要 Rosetta。在终端执行：softwareupdate --install-rosetta --agree-to-license" buttons {"好"} default button 1 with title "H2sim"' || true
   exit 1
 fi
-if [[ ! -e /Library/Frameworks/Mono.framework/Versions/Current/lib/libmonosgen-2.0.dylib ]]; then
+MONO=/Library/Frameworks/Mono.framework/Versions/Current/bin/mono
+if [[ ! -x "$MONO" ]]; then
   osascript -e 'display dialog "H2sim 需要 Mono 6.12。请安装 Mono Framework MDK 后再打开。" buttons {"好"} default button 1 with title "H2sim"' || true
   exit 1
 fi
+GTK=/usr/local/lib/libgtk-3.0.dylib
+if [[ ! -f "$GTK" ]] || ! file "$GTK" | grep -q 'x86_64'; then
+  osascript -e 'display dialog "H2sim 的 macOS GTK3 版需要 x86_64 GTK3。Intel Mac：brew install gtk+3。Apple Silicon：需要在 Rosetta 前缀 /usr/local 安装 x86_64 GTK3（arch -x86_64 /usr/local/bin/brew install gtk+3）。" buttons {"好"} default button 1 with title "H2sim"' || true
+  exit 1
+fi
 DIR="$(cd "$(dirname "$0")" && pwd)"
-exec arch -x86_64 "$DIR/H2sim.bin"
+export H2SIM_MAC_RENDERER=Gtk3
+export PANGOCAIRO_BACKEND=fontconfig
+export GTK_DATA_PREFIX=/usr/local
+export XDG_DATA_DIRS="/usr/local/share:${XDG_DATA_DIRS:-}"
+cd "$DIR/../MonoBundle"
+exec arch -x86_64 "$MONO" DWSIM.UI.Desktop.exe
 EOF
 chmod +x "$APP/Contents/MacOS/H2sim"
 

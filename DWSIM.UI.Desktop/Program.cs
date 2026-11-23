@@ -50,6 +50,18 @@ namespace DWSIM.UI.Desktop
                 loadsetex = ex;
             }
 
+            if (Settings.RunningPlatform() == Settings.Platform.Mac)
+            {
+                // The packaged launcher can force GTK3 even when an existing
+                // dwsim_newui.ini still says MonoMac.
+                var forcedRenderer = Environment.GetEnvironmentVariable("H2SIM_MAC_RENDERER");
+                if (!string.IsNullOrEmpty(forcedRenderer))
+                {
+                    Settings.MacOSRenderer = (Settings.MacOSPlatformRenderer)Enum.Parse(
+                        typeof(Settings.MacOSPlatformRenderer), forcedRenderer, true);
+                }
+            }
+
             Eto.Platform platform = null;
 
             try

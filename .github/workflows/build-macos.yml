@@ -104,6 +104,7 @@ jobs:
           # Avoid CoreText's Apple Color Emoji image path, which crashes while
           # Pango/Cairo renders a fallback glyph on the macOS runner.
           export PANGOCAIRO_BACKEND="fontconfig"
+          export H2SIM_MAC_RENDERER="Gtk3"
           cd DWSIM.UI.Desktop/bin/Release
           mono DWSIM.UI.Desktop.exe > "$RUNNER_TEMP/gtk3.log" 2>&1 &
           pid=$!
@@ -118,6 +119,31 @@ jobs:
           sleep 2
           tail -100 "$RUNNER_TEMP/gtk3.log"
 
+      - name: Package GTK3 dmg
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          bash scripts/package-macos.sh
+
+      - name: Run the packaged app
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          MNT="$RUNNER_TEMP/h2sim-mnt"
+          hdiutil attach -nobrowse -mountpoint "$MNT" release/macos/H2sim-*-macos-x64.dmg
+          "$MNT/H2sim.app/Contents/MacOS/H2sim" > "$RUNNER_TEMP/package.log" 2>&1 &
+          pid=$!
+          sleep 30
+          if kill -0 "$pid" 2>/dev/null; then
+            echo "PACKAGE PROBE: process alive after 30 s"
+          else
+            echo "PACKAGE PROBE: process exited"
+          fi
+          kill "$pid" 2>/dev/null || true
+          sleep 2
+          tail -100 "$RUNNER_TEMP/package.log"
+          hdiutil detach "$MNT" || true
+
       - name: Upload probe evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -126,4 +152,5 @@ jobs:
           path: |
             ${{ runner.temp }}/gtk3.log
             ${{ runner.temp }}/gtk3.png
+            ${{ runner.temp }}/package.log
           if-no-files-found: warn
