@@ -20,7 +20,16 @@ jobs:
 
       - name: Install .NET Framework 4.6.1 targeting pack
         shell: pwsh
-        run: choco install netfx-4.6.1-devpack -y --no-progress
+        run: |
+          # The Chocolatey community feed returns 503 often enough to break this step.
+          # Retry a few times; a missing targeting pack fails every project with MSB3644.
+          for ($i = 1; $i -le 3; $i++) {
+            choco install netfx-4.6.1-devpack -y --no-progress
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Write-Host "choco install failed (attempt $i of 3), retrying after $($i * 20) s"
+            Start-Sleep -Seconds ($i * 20)
+          }
+          exit 1
 
       - name: Restore and build
         shell: pwsh
