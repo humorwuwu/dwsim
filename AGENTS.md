@@ -36,7 +36,7 @@ H2sim 是 DWSIM 9.0.5 的 GPLv3 派生仓库，目标改造为「电解水制氢
 - 构建产物：`DWSIM\bin\x64\Release\DWSIM.exe`。
 - Windows 单文件包：`powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1`（需要 NSIS `makensis`）。
   产物 `release/windows/H2sim-<version>-windows-x64.exe`，首次运行自解压到 `%LOCALAPPDATA%\H2sim\<version>` 并启动 `DWSIM.exe`。
-- macOS `.dmg`：`bash scripts/package-macos.sh`，产物 `release/macos/H2sim-<version>-macos-x64.dmg`。主程序走 Rosetta，运行需要本机已安装 Mono 6.12。窗口能否起来仍是 Gate 0 V-3。
+- macOS `.dmg`：`bash scripts/package-macos.sh`，产物 `release/macos/H2sim-<version>-macos-x64.dmg`。**当前不能启动**：Gate 0 V-3 失败，`Eto.XamMac2` 需要 Xamarin.Mac 自带的 Mono 运行时，系统 Mono 6.12 不够。dmg 只用于验证打包流程，详见 `docs/verification.md`。macOS 桌面若继续，只走 GTK3 或 .NET 8。
 - 目标框架：全仓 .NET Framework 4.6.2（少数 4.6.1/4.8）。**不要引入只支持 netstandard2.1 / net6.0+ 的包**。
 - NuGet 还原用 `nuget restore`，不要用 `msbuild -t:restore`（本仓库是 packages.config + HintPath，没有 restore target）。
 

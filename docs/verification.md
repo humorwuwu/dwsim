@@ -127,9 +127,32 @@
 ## 本地 macOS（Mono 6.12，x86_64 / Rosetta）
 
 - `DWSIM.H2sim.Io.Tests`：**PASS**。覆盖 SignalMap 序列化/校验、缩放方向、NModbus 真实 TCP 自环。
-- 全量 `DWSIM.Automation.Dynamics.Tests` 的本地构建被 `DWSIM.Controls.PythonConsoleControl`（WPF）挡住；Mono 没有 WPF，只能改用 CI 产物运行。
-- GUI 与 Rosetta 启动仍属于 Gate 0 V-3，尚未完成。曾尝试下载上一轮 Windows
-  CI 产物，但 GitHub artifact 下载持续无数据，已中止。
+- `DWSIM.Automation.Dynamics.Tests`：本机编过并跑到末行 **PASS**（约 7 分钟）。
+  `Directory.Build.targets` 在非 Windows 构建里跳过 WPF 渲染器和两个 WPF Python
+  控制台；`licenses.licx` 也跳过。日志里的 ThermoC/ThermoCS `TypeLoadException`
+  来自 i386 原生库，可忽略，以末行 `PASS` 为准。
+- 2026-11-23 复跑：`PASS`。ALK 314.15 K / 8.13 kg/s，PEM 310.74 K / 5.80 kg/s，
+  `compression dynamic` 两行分别为 C-1 10.46 kW / C-2 9.45 kW（PEM）。
+
+## Gate 0 V-3 macOS 桌面启动（2026-11-23）
+
+- 本机：macOS 27.2.1（Apple Silicon），Mono Framework 6.12 已装。
+- 产物：`release/macos/H2sim-0.3.0-macos-x64.dmg`，启动器为 x86_64，`hdiutil attach` 正常。
+- 直接运行 `H2sim.app/Contents/MacOS/H2sim`：
+  - **第一次失败**：`Eto.XamMac2 2.8.2` 初始化时找不到
+    `Eto.IO.SystemIcons/IHandler`。`Eto.Forms 2.8.3` 的 `netstandard2.0/Eto.dll`
+    没有这个嵌套类型（`Eto.Forms 2.8.2` 的同名程序集有）。把包内 `Eto.dll`
+    换成 2.8.2 后越过此点。
+  - **第二次失败**：`Xamarin.Mac 4.2.0.19` 的 `ObjCRuntime.Runtime.Initialize`
+    调用 `System.Threading._ThreadPoolWaitCallback.SetDispatcher`。Mono 6.12 MDK
+    和 Eto 的 `mono-6.12.0-osx-10.9-x64-eto` 运行时都没有这个内部方法；它属于
+    Xamarin.Mac 自带的 Mono 运行时。本机没有 `/Library/Frameworks/Xamarin.Mac.framework`。
+- 结果：**FAIL**。方案 M1（XamMac2 + 系统 Mono）不成立。dmg 只能证明打包流程，
+  不能启动窗口；`release/macos/` 里的 0.3.0 产物不是可用发行版。
+- 未做：方案 M2（GTK3）需要 x86_64 GTK3。Homebrew 在 Apple Silicon 上装的是
+  arm64（已确认 `/opt/homebrew/lib/libgtk-3.0.dylib` 为 arm64），x86_64 的 Mono
+  进程加载不了；要另装 Rosetta 前缀（`/usr/local`）或 gtk-osx 的 x86_64 构建。
+  .NET 8 + `Eto.Platform.macOS` 是另一条路，但会牵动全仓 target framework。
 
 ## T-3.1 UI host 接线
 
