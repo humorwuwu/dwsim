@@ -1,0 +1,53 @@
+name: build-macos
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # macos-13 is the Intel runner. Mono 6.12 is x86_64; macos-14/15 are arm64.
+    runs-on: macos-13
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Mono 6.12
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 -o "$RUNNER_TEMP/mono.pkg" \
+            "https://download.mono-project.com/archive/6.12.0/macos-10-universal/MonoFramework-MDK-6.12.0.206.macos10.xamarin.universal.pkg"
+          sudo installer -pkg "$RUNNER_TEMP/mono.pkg" -target /
+
+      - name: Show toolchain
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          mono --version | head -2
+          msbuild -version | head -2
+          nuget help | head -2
+
+      - name: Build macOS desktop
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          bash scripts/build-macos.sh
+
+      - name: Package macOS dmg
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          bash scripts/package-macos.sh
+
+      - name: Upload macOS dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: h2sim-macos-dmg
+          path: release/macos/H2sim-*-macos-x64.dmg
+          if-no-files-found: error
+
+      - name: Run dynamics tests
+        shell: bash
+        run: |
+          export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
+          bash scripts/test-macos.sh
