@@ -52,8 +52,8 @@ chmod +x "$APP/Contents/MacOS/H2sim"
 
 # 托管程序集。pdb / xml 不进包。Pro 和 ThermoC 不进 macOS 包。
 find "$SRC" -maxdepth 1 \( -name '*.dll' -o -name '*.exe' -o -name '*.config' -o -name '*.dylib' \) \
-  ! -name 'DWSIM.ProFeatures.dll' \
-  ! -name 'DWSIM.Thermodynamics.ThermoC.dll' \
+  ! -name 'DWSIM.ProFeatures.*' \
+  ! -name 'DWSIM.Thermodynamics.ThermoC.*' \
   -exec cp {} "$BUNDLE/" \;
 cp "DWSIM/References/Xamarin.Mac.dll" "$BUNDLE/Xamarin.Mac.dll"
 

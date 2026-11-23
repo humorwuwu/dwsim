@@ -146,6 +146,10 @@
   Mono 没有 WPF。脚本只构建 `DWSIM.UI.Desktop` 的依赖图（AnyCPU），并跳过
   `licenses.licx` 和 Windows `xcopy` PostBuildEvent。
 - 工具链补全不等于窗口能启动：Gate 0 V-3 仍失败，见下节。
+- 打包：`bash scripts/package-macos.sh` 成功产出
+  `release/macos/H2sim-0.3.1-macos-x64.dmg`（168 MB，SHA-256 `bf2718a0…`）。
+  包内有 `DWSIM.UI.Desktop.exe`、`Xamarin.Mac.dll` 和两个厂模板；不含
+  `ThermoCS/`、ThermoC、ProFeatures。**仍然不能启动**，不要当发行物。
 
 ## Gate 0 V-3 macOS 桌面启动（2026-11-23）
 

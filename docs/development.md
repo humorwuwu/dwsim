@@ -73,11 +73,13 @@ powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1
 bash scripts/package-macos.sh
 ```
 
-- 前置：`DWSIM.UI.Desktop/bin/Release/DWSIM.UI.Desktop.exe` 已构建。
+- 前置：先 `bash scripts/build-macos.sh`，`DWSIM.UI.Desktop/bin/Release/DWSIM.UI.Desktop.exe` 存在。
 - 产物：`release/macos/H2sim-<version>-macos-x64.dmg`，内含 `H2sim.app`。
+- 本机已用 0.3.1 跑通：`release/macos/H2sim-0.3.1-macos-x64.dmg`（168 MB，
+  SHA-256 `bf2718a0…`）。
 - 主程序是 x86_64，Apple Silicon 上由 Rosetta 运行。
 - 启动器读取 `/Library/Frameworks/Mono.framework`（Mono 6.12）。没有安装时，打开 app 会提示先装 Mono。
-- 包内不含 `ThermoCS/`（i386）和 `DWSIM.ProFeatures.dll`。
+- 包内不含 `ThermoCS/`（i386）、ThermoC 程序集/配置和 `DWSIM.ProFeatures.dll`。
 - 未签名未公证。
 - **这个包当前不能启动**。Gate 0 V-3 已失败：`Eto.XamMac2` 需要 Xamarin.Mac 自带的
   Mono 运行时，系统 Mono 6.12 缺少它调用的
