@@ -181,6 +181,15 @@ jobs:
           cp "$GTK_SOURCE" "$BUNDLE/lib/libgtk-3.0.dylib"
           dylibbundler -cd -b -of -x "$BUNDLE/lib/libgtk-3.0.dylib" \
             -d "$BUNDLE/lib" -p "@loader_path" -s /usr/local/lib
+          # Eto/GtkSharp P/Invokes the unversioned names; dylibbundler copies
+          # libfoo-X.Y.dylib, so add the aliases the runtime asks for.
+          for alias in libgdk_pixbuf-2.0 libgobject-2.0 libglib-2.0 libgio-2.0 \
+                       libgmodule-2.0 libpango-1.0 libpangocairo-1.0 libatk-1.0; do
+            src="$(ls "$BUNDLE/lib/${alias}"*.dylib 2>/dev/null | head -1 || true)"
+            if [[ -n "$src" ]]; then
+              ln -sf "$(basename "$src")" "$BUNDLE/lib/${alias}.dylib"
+            fi
+          done
           cp -R /usr/local/lib/gtk-3.0 "$BUNDLE/lib/" || true
           cp -R /usr/local/lib/gdk-pixbuf-2.0 "$BUNDLE/lib/" || true
           mkdir -p "$BUNDLE/share" "$BUNDLE/etc"
