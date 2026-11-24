@@ -162,6 +162,68 @@ jobs:
           tail -100 "$RUNNER_TEMP/package.log"
           hdiutil detach "$MNT" || true
 
+      - name: Bundle GTK3 and run without system libs
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew install dylibbundler
+          MNT="$RUNNER_TEMP/bundle-mnt"
+          APP="$RUNNER_TEMP/bundle-app/H2sim.app"
+          rm -rf "$RUNNER_TEMP/bundle-app" "$MNT"
+          mkdir -p "$RUNNER_TEMP/bundle-app" "$MNT"
+          hdiutil attach -nobrowse -mountpoint "$MNT" release/macos/H2sim-*-macos-x64.dmg
+          cp -R "$MNT/H2sim.app" "$RUNNER_TEMP/bundle-app/"
+          hdiutil detach "$MNT"
+          BUNDLE="$APP/Contents/MonoBundle"
+          chmod -R u+w "$APP"
+          mkdir -p "$BUNDLE/lib"
+          GTK_SOURCE="$(python3 -c 'import os; print(os.path.realpath("/usr/local/lib/libgtk-3.0.dylib"))')"
+          cp "$GTK_SOURCE" "$BUNDLE/lib/libgtk-3.0.dylib"
+          dylibbundler -cd -b -of -x "$BUNDLE/lib/libgtk-3.0.dylib" \
+            -d "$BUNDLE/lib" -p "@loader_path" -s /usr/local/lib
+          cp -R /usr/local/lib/gtk-3.0 "$BUNDLE/lib/" || true
+          cp -R /usr/local/lib/gdk-pixbuf-2.0 "$BUNDLE/lib/" || true
+          mkdir -p "$BUNDLE/share" "$BUNDLE/etc"
+          cp -R /usr/local/share/gtk-3.0 "$BUNDLE/share/" || true
+          cp -R /usr/local/share/themes "$BUNDLE/share/" || true
+          cp -R /usr/local/share/icons "$BUNDLE/share/" || true
+          cp -R /usr/local/share/glib-2.0 "$BUNDLE/share/" || true
+          cp -R /usr/local/etc/gtk-3.0 "$BUNDLE/etc/" || true
+          cp -R /usr/local/etc/fonts "$BUNDLE/etc/" || true
+          if command -v gdk-pixbuf-query-loaders >/dev/null; then
+            GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
+              gdk-pixbuf-query-loaders "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so \
+              > "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" || true
+          fi
+          echo "BUNDLED LIBS: $(ls "$BUNDLE/lib" | wc -l)"
+          sudo mv /usr/local/lib /usr/local/lib.h2sim-hidden
+          trap 'sudo mv /usr/local/lib.h2sim-hidden /usr/local/lib || true' EXIT
+          cd "$BUNDLE"
+          export H2SIM_MAC_RENDERER=Gtk3
+          export PANGOCAIRO_BACKEND=fontconfig
+          export DYLD_LIBRARY_PATH="$BUNDLE/lib"
+          export GTK_DATA_PREFIX="$BUNDLE"
+          export XDG_DATA_DIRS="$BUNDLE/share:/usr/share"
+          export GDK_PIXBUF_MODULE_FILE="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+          export GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+          export GSETTINGS_SCHEMA_DIR="$BUNDLE/share/glib-2.0/schemas"
+          /Library/Frameworks/Mono.framework/Versions/Current/bin/mono DWSIM.UI.Desktop.exe \
+            > "$RUNNER_TEMP/bundled.log" 2>&1 &
+          pid=$!
+          sleep 30
+          if kill -0 "$pid" 2>/dev/null; then
+            echo "BUNDLED PROBE: process alive after 30 s"
+          else
+            echo "BUNDLED PROBE: process exited"
+          fi
+          swift "$RUNNER_TEMP/windows.swift" > "$RUNNER_TEMP/bundled-windows.log" 2>&1 || true
+          cat "$RUNNER_TEMP/bundled-windows.log"
+          kill "$pid" 2>/dev/null || true
+          sleep 2
+          sudo mv /usr/local/lib.h2sim-hidden /usr/local/lib || true
+          trap - EXIT
+          tail -100 "$RUNNER_TEMP/bundled.log"
+
       - name: Upload probe evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -172,4 +234,6 @@ jobs:
             ${{ runner.temp }}/gtk3.png
             ${{ runner.temp }}/package.log
             ${{ runner.temp }}/windows.log
+            ${{ runner.temp }}/bundled.log
+            ${{ runner.temp }}/bundled-windows.log
           if-no-files-found: warn
