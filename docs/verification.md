@@ -182,11 +182,15 @@
   30 s 后仍存活。启动器已改为 mono + GTK3，不再经过 XamMac2。
 - 正常 `build-macos` run `45170975565`：整轮 **success**，GTK3 dmg 已上传，
   动力学测试 PASS。
+- 第四次探测（run `45301645447`，HEAD `4408c65fc`）：打包后的 app 存活，
+  并用 `CGWindowListCopyWindowInfo` 列出窗口：
+  `mono | DWSIM`、`mono | DWSIM Launcher`、`mono | What's New`。
+  **主窗口确实创建了**，不是只有空转的进程。
 - 结论：**GTK3 渲染器在 x86_64 macOS + Homebrew GTK3 上可行**；XamMac2 仍然
   不可用。GTK3 需要 **x86_64** 的 `libgtk-3.0.dylib`，Apple Silicon 上要用
   Rosetta 前缀的 Homebrew（`/usr/local`）安装。
-- 下一步：在真实显示器上确认窗口和交互（runner 无显示会话），再决定是否把
-  GTK3 dmg 作为正式发行物。
+- 还缺：真实显示器上的截图/交互验证（runner 无 `screencapture` 权限/显示会话），
+  以及是否把 GTK3 依赖打进 dmg。
 
 ## Gate 0 V-3 macOS 桌面启动（2026-11-23）
 
