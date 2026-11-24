@@ -9,6 +9,22 @@
 - 测试：`DWSIM.H2sim.Io.Tests`、`DWSIM.Automation.Dynamics.Tests`，以及
   OpenPLC v4 官方 Modbus/OPC UA 插件探针
 
+## 0.3.2 发布构建（2026-11-24）
+
+- Windows run `45325305935`：`build (Debug)` 和 `build (Release)` 都成功，
+  Release 的构建、启动冒烟、安装/启动冒烟、SignalMap、动态测试、模板生成、
+  单文件打包全部通过。整轮结论是 failure，**只因 `openplc-compiler` 的 fixture
+  编译失败**（PLC 工作按 2026-11-22 方向暂停，不影响 Windows 产物）。
+- Windows 包：`release/windows/H2sim-0.3.2-windows-x64.exe`（195 MiB，SHA-256
+  `d4047e0d…`）。
+- macOS run `45325305883`：整轮 **success**；`Bundled GTK3 libraries: 44`，
+  动力学测试末行 **PASS**。
+- macOS 包：`release/macos/H2sim-0.3.2-macos-x64.dmg`（179 MiB，SHA-256
+  `9042c49a…`），`DWSIM.UI.Desktop.exe` 版本 `0.3.2.0`，内置 GTK3，含两个厂模板。
+- 自包含探测 run `45319801481`：隐藏 `/usr/local/lib` 后打包 app 仍存活并创建
+  `mono | DWSIM` 窗口。本机 Apple Silicon 复测 GTK3/fontconfig 从内置库加载；
+  agent 会话无显示器，停在 `Screen.get_WorkingArea`。
+
 ## V-5.1.1 Modbus 自环（无 OpenPLC）
 
 - 流程：加载 `Dynamic Simulation - Water Tank Level Control.dwxmz` → 启动 `ModbusTcpServerBridge` → NModbus 客户端写 holding register 0（SP=1.8 m，Scale 1000）→ 用 `DynamicsRunner` + `BridgeDynamicsHost` 跑 2 步 → 客户端读 input register 0（液位）。

@@ -6,7 +6,7 @@
 
 - 仓库：`/Volumes/SSD_exit/code_go/H2sim`（外置 SSD；旧的 `/Users/wcx/ongoing/H2sim` 已不是工作副本）
 - 分支：`h2sim/phase-a`
-- 版本：`VERSION` = `0.3.1`，`CHANGELOG.md` 有对应的 0.3.1 节，所有 `AssemblyInfo` 已同步
+- 版本：`VERSION` = `0.3.2`，`CHANGELOG.md` 有对应的 0.3.2 节，所有 `AssemblyInfo` 已同步
 - 今天的工作已提交并推送（`origin/h2sim/phase-a`）：
   - `T-0.3`：非 Windows 构建 + macOS 打包脚本
   - `T-4.1`：阴极闪蒸 + 两级压缩断言 + ALK SEC 回归
@@ -16,21 +16,19 @@
   - `ci`：4.6.1 devpack 安装重试 + 安装包静默安装/启动冒烟
   - `T-1.2`：电解槽报告输出全部 KPI，纯度补 `%` 单位
   - `release 0.3.1`：版本与 `AssemblyInfo`
-- Windows CI run `45118882085`（HEAD `2b58eb194`，含 devpack 重试和安装冒烟）
-  整轮 **success**；Windows 单文件包在
-  `release/windows/H2sim-0.3.1-windows-x64.exe`（195 MiB，
-  SHA-256 `8c5bd493…`）。0.3.0 的包也还在同目录，留作回退。
-- macOS：本机 `bash scripts/build-macos.sh`（Release/Debug）BUILD OK；
-  GitHub `build-macos` workflow 在 `macos-15-intel` 上装 Mono 6.12，构建、
-  打包并跑完动力学测试 **PASS**（run `45170975565`）。GTK3 探测（run
-  `45301645447` / `45319801481`）确认打包后的 app 存活并创建 `DWSIM` 主窗口；
-  自包含包在隐藏 `/usr/local/lib` 后仍启动。当前
-  `release/macos/H2sim-0.3.1-macos-x64.dmg` 是 **自包含 GTK3** 版（180 MiB，
-  SHA-256 `0bdde4b8…`），目标机只需 Mono 6.12（Apple Silicon 走 Rosetta），
-  不再需要单独安装 GTK3。启动器用 `arch -x86_64 env DYLD_LIBRARY_PATH=...`
-  绕过 Rosetta 切换丢环境变量的问题；本机 Apple Silicon 已确认 GTK3/fontconfig
-  从内置库加载，agent 会话无显示器，停在 `Screen.get_WorkingArea`。真实显示器
-  截图仍待补。
+  - `macos`：GTK3 启动、自包含 bundle、Rosetta env/fontconfig 修复
+  - `release 0.3.2`：版本与 `AssemblyInfo`
+- Windows 0.3.2 run `45325305935`：`build (Release)` 成功（含安装/启动冒烟），
+  整轮红只因 `openplc-compiler` fixture 编译失败（PLC 暂停）。包在
+  `release/windows/H2sim-0.3.2-windows-x64.exe`（195 MiB，
+  SHA-256 `d4047e0d…`）。0.3.0/0.3.1 的包也还在同目录，留作回退。
+- macOS 0.3.2 run `45325305883`：整轮 **success**，44 个内置 GTK3 库，
+  动力学测试 **PASS**。包在 `release/macos/H2sim-0.3.2-macos-x64.dmg`
+  （179 MiB，SHA-256 `9042c49a…`），目标机只需 Mono 6.12（Apple Silicon 走
+  Rosetta），不再需要单独安装 GTK3。启动器用
+  `arch -x86_64 env DYLD_LIBRARY_PATH=...` 绕过 Rosetta 切换丢环境变量；
+  本机 Apple Silicon 已确认 GTK3/fontconfig 从内置库加载，agent 会话无显示器，
+  停在 `Screen.get_WorkingArea`。真实显示器截图仍待补。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
