@@ -163,10 +163,11 @@
   → 上传 `h2sim-macos-dmg` → `scripts/test-macos.sh`。
 - 动力学测试在 runner 上末行 **PASS**（约 14 分钟，包含 ALK SEC、阴极闪蒸、
   两级压缩稳态/动态断言）。
-- CI dmg：`release/macos/H2sim-0.3.1-macos-x64.dmg`（165 MiB，SHA-256
-  `c1c81dc3…`）。启动器是 GTK3 + mono，不再是 XamMac2；包内
+- CI dmg：`release/macos/H2sim-0.3.1-macos-x64.dmg`（180 MiB，SHA-256
+  `0bdde4b8…`）。启动器是 GTK3 + mono，GTK3 已内置；包内
   `DWSIM.UI.Desktop.exe` 版本 `0.3.1.0`，含两个厂模板，不含 ThermoC/ProFeatures。
-- 打包后的 app 已通过 30 s 存活探测；runner 无显示会话，真实窗口截图仍待补。
+- 打包后的 app 已通过 30 s 存活探测和隐藏 `/usr/local/lib` 的自包含探测；
+  runner/agent 无显示会话，真实窗口截图仍待补。
 
 ## macOS GTK3 运行时探测（2026-11-23）
 
@@ -186,11 +187,21 @@
   并用 `CGWindowListCopyWindowInfo` 列出窗口：
   `mono | DWSIM`、`mono | DWSIM Launcher`、`mono | What's New`。
   **主窗口确实创建了**，不是只有空转的进程。
-- 结论：**GTK3 渲染器在 x86_64 macOS + Homebrew GTK3 上可行**；XamMac2 仍然
-  不可用。GTK3 需要 **x86_64** 的 `libgtk-3.0.dylib`，Apple Silicon 上要用
-  Rosetta 前缀的 Homebrew（`/usr/local`）安装。
-- 还缺：真实显示器上的截图/交互验证（runner 无 `screencapture` 权限/显示会话），
-  以及是否把 GTK3 依赖打进 dmg。
+- 自包含验证（run `45319801481`）：dmg 内置 44 个 GTK3 库、pixbuf loaders
+  和运行时展开的 loader cache；**隐藏 `/usr/local/lib` 后** app 仍存活 30 s，
+  并创建 `mono | DWSIM`、`mono | DWSIM Launcher`、`mono | What's New` 窗口。
+  GTK3 不再需要目标机安装。
+- **Rosetta 修复**：`arch -x86_64` 会丢掉 `DYLD_LIBRARY_PATH`；启动器改为
+  `arch -x86_64 env DYLD_LIBRARY_PATH=... mono`。本机 Apple Silicon 复测：
+  GTK3 和 fontconfig 都从 dmg 内置库加载，无 `DllNotFound` / `Fontconfig`
+  错误；agent 会话没有显示器，停在 `Screen.get_WorkingArea`，属于环境限制。
+- 正常 `build-macos` run `45321032216`：自包含 dmg 构建、上传、动力学测试
+  **PASS**。当前 `release/macos/H2sim-0.3.1-macos-x64.dmg` 是补齐 Rosetta env
+  后的本机重打包版本（180 MiB，SHA-256 `0bdde4b8…`）。
+- 结论：**GTK3 自包含包可行**；XamMac2 仍然不可用。目标机只需要 Mono 6.12
+  （x86_64；Apple Silicon 走 Rosetta），不需要单独安装 GTK3。
+- 还缺：真实显示器上的截图/交互验证（runner 和 agent 会话都没有可截图的
+  显示会话）。
 
 ## Gate 0 V-3 macOS 桌面启动（2026-11-23）
 

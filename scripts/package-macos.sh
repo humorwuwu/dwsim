@@ -42,31 +42,40 @@ if [[ ! -x "$MONO" ]]; then
 fi
 DIR="$(cd "$(dirname "$0")" && pwd)"
 BUNDLE_DIR="$(cd "$DIR/../MonoBundle" && pwd)"
-export H2SIM_MAC_RENDERER=Gtk3
-export PANGOCAIRO_BACKEND=fontconfig
 if [[ -f "$BUNDLE_DIR/lib/libgtk-3.0.dylib" ]]; then
-  export DYLD_LIBRARY_PATH="$BUNDLE_DIR/lib:${DYLD_LIBRARY_PATH:-}"
-  export GTK_DATA_PREFIX="$BUNDLE_DIR"
-  export XDG_DATA_DIRS="$BUNDLE_DIR/share:/usr/share:${XDG_DATA_DIRS:-}"
   CACHE_SRC="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+  CACHE_TMP="${TMPDIR:-/tmp}/h2sim-pixbuf-$$.cache"
   if [[ -f "$CACHE_SRC" ]]; then
-    CACHE_TMP="${TMPDIR:-/tmp}/h2sim-pixbuf-$$.cache"
     sed "s|@H2SIM_BUNDLE@|$BUNDLE_DIR|g" "$CACHE_SRC" > "$CACHE_TMP"
-    export GDK_PIXBUF_MODULE_FILE="$CACHE_TMP"
   fi
-  export GDK_PIXBUF_MODULEDIR="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"
-  export GSETTINGS_SCHEMA_DIR="$BUNDLE_DIR/share/glib-2.0/schemas"
-else
-  GTK=/usr/local/lib/libgtk-3.0.dylib
-  if [[ ! -f "$GTK" ]] || ! file "$GTK" | grep -q 'x86_64'; then
-    osascript -e 'display dialog "H2sim 的自包含 GTK3 包缺少内置库。请反馈构建问题，或安装 x86_64 GTK3（Intel：brew install gtk+3；Apple Silicon：Rosetta 前缀 /usr/local）。" buttons {"好"} default button 1 with title "H2sim"' || true
-    exit 1
-  fi
-  export GTK_DATA_PREFIX=/usr/local
-  export XDG_DATA_DIRS="/usr/local/share:${XDG_DATA_DIRS:-}"
+  cd "$BUNDLE_DIR"
+  # arch -x86_64 strips DYLD_* when switching to Rosetta, so set it on the
+  # x86_64 side through env.
+  exec arch -x86_64 env \
+    DYLD_LIBRARY_PATH="$BUNDLE_DIR/lib" \
+    H2SIM_MAC_RENDERER=Gtk3 \
+    PANGOCAIRO_BACKEND=fontconfig \
+    GTK_DATA_PREFIX="$BUNDLE_DIR" \
+    XDG_DATA_DIRS="$BUNDLE_DIR/share:/usr/share" \
+    GDK_PIXBUF_MODULE_FILE="$CACHE_TMP" \
+    GDK_PIXBUF_MODULEDIR="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
+    GSETTINGS_SCHEMA_DIR="$BUNDLE_DIR/share/glib-2.0/schemas" \
+    FONTCONFIG_PATH="$BUNDLE_DIR/etc/fonts" \
+    FONTCONFIG_FILE="$BUNDLE_DIR/etc/fonts/fonts.conf" \
+    "$MONO" DWSIM.UI.Desktop.exe
+fi
+GTK=/usr/local/lib/libgtk-3.0.dylib
+if [[ ! -f "$GTK" ]] || ! file "$GTK" | grep -q 'x86_64'; then
+  osascript -e 'display dialog "H2sim 的自包含 GTK3 包缺少内置库。请反馈构建问题，或安装 x86_64 GTK3（Intel：brew install gtk+3；Apple Silicon：Rosetta 前缀 /usr/local）。" buttons {"好"} default button 1 with title "H2sim"' || true
+  exit 1
 fi
 cd "$BUNDLE_DIR"
-exec arch -x86_64 "$MONO" DWSIM.UI.Desktop.exe
+exec arch -x86_64 env \
+  H2SIM_MAC_RENDERER=Gtk3 \
+  PANGOCAIRO_BACKEND=fontconfig \
+  GTK_DATA_PREFIX=/usr/local \
+  XDG_DATA_DIRS=/usr/local/share \
+  "$MONO" DWSIM.UI.Desktop.exe
 EOF
 chmod +x "$APP/Contents/MacOS/H2sim"
 

@@ -81,15 +81,16 @@ bash scripts/package-macos.sh
 - 前置：先 `bash scripts/build-macos.sh`，`DWSIM.UI.Desktop/bin/Release/DWSIM.UI.Desktop.exe` 存在。
 - 产物：`release/macos/H2sim-<version>-macos-x64.dmg`，内含 `H2sim.app`。
 - 0.3.1 已在本机和 GitHub `macos-15-intel` runner 打出；当前
-  `release/macos/H2sim-0.3.1-macos-x64.dmg` 是 **GTK3 版**（165 MB，
-  SHA-256 `c1c81dc3…`）。
+  `release/macos/H2sim-0.3.1-macos-x64.dmg` 是 **自包含 GTK3 版**（180 MiB，
+  SHA-256 `0bdde4b8…`）。启动器用 `arch -x86_64 env DYLD_LIBRARY_PATH=...`
+  绕过 Rosetta 切换时丢失环境变量的问题。
 - 主程序是 x86_64，Apple Silicon 上由 Rosetta 运行。
 - 启动器走 **GTK3 + mono**：设置 `H2SIM_MAC_RENDERER=Gtk3`、
   `PANGOCAIRO_BACKEND=fontconfig`，再 `exec mono DWSIM.UI.Desktop.exe`。
   不再使用 Eto 的 XamMac2 启动器（它需要 Xamarin.Mac 自带的 Mono）。
-- 运行目标机需要 **x86_64 GTK3**：Intel Mac `brew install gtk+3`；Apple Silicon
-  需要 Rosetta 前缀 `/usr/local` 里的 x86_64 Homebrew
-  （`arch -x86_64 /usr/local/bin/brew install gtk+3`）。
+- dmg 内置 **x86_64 GTK3**（`H2SIM_BUNDLE_GTK3=1` 时用 `dylibbundler` 打包
+  44 个库、pixbuf loaders 和运行时 cache），**不再要求目标机安装 GTK3**。
+- 目标机只需要 **Mono 6.12**（x86_64；Apple Silicon 走 Rosetta）。
 - 包内不含 `ThermoCS/`（i386）、ThermoC 程序集/配置和 `DWSIM.ProFeatures.dll`。
 - 未签名未公证。CI 探针（`build-macos.yml` 的 `probe=true`）已验证打包后的
   `H2sim.app` 在 Intel + GTK3 上存活 30 s；runner 没有可截图的显示会话，

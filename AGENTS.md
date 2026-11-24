@@ -56,7 +56,7 @@ WPF 渲染器和两个 WPF Python 控制台。桌面窗口能否启动仍受 Gat
 - 构建产物：`DWSIM\bin\x64\Release\DWSIM.exe`。
 - Windows 单文件包：`powershell -ExecutionPolicy Bypass -File scripts/package-windows.ps1`（需要 NSIS `makensis`）。
   产物 `release/windows/H2sim-<version>-windows-x64.exe`，首次运行自解压到 `%LOCALAPPDATA%\H2sim\<version>` 并启动 `DWSIM.exe`。
-- macOS `.dmg`：`bash scripts/package-macos.sh`，产物 `release/macos/H2sim-<version>-macos-x64.dmg`。启动器走 **mono + GTK3**（`H2SIM_MAC_RENDERER=Gtk3`、`PANGOCAIRO_BACKEND=fontconfig`），需要 **x86_64 GTK3**；XamMac2 启动器已弃用。CI 已验证打包后的 app 存活 30 s 并创建 `DWSIM` 主窗口，但真实显示器上的截图/交互还没验证，暂不作为通用发行物。详见 `docs/verification.md`。
+- macOS `.dmg`：`bash scripts/package-macos.sh`，产物 `release/macos/H2sim-<version>-macos-x64.dmg`。启动器走 **mono + GTK3**（`H2SIM_MAC_RENDERER=Gtk3`、`PANGOCAIRO_BACKEND=fontconfig`），GTK3 已打进 dmg（`H2SIM_BUNDLE_GTK3=1`），目标机只需要 Mono 6.12（Apple Silicon 走 Rosetta）；XamMac2 启动器已弃用。CI 已验证隐藏 `/usr/local/lib` 后打包 app 仍存活并创建 `DWSIM` 主窗口，但真实显示器截图/交互未验证，暂不作为通用发行物。详见 `docs/verification.md`。
 - 目标框架：全仓 .NET Framework 4.6.2（少数 4.6.1/4.8）。**不要引入只支持 netstandard2.1 / net6.0+ 的包**。
 - NuGet 还原用 `nuget restore`，不要用 `msbuild -t:restore`（本仓库是 packages.config + HintPath，没有 restore target）。
 
