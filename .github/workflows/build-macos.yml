@@ -139,6 +139,24 @@ jobs:
           else
             echo "PACKAGE PROBE: process exited"
           fi
+          cat > "$RUNNER_TEMP/windows.swift" <<'SWIFT'
+          import CoreGraphics
+          let opts: CGWindowListOption = [.optionAll, .excludeDesktopElements]
+          if let list = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: Any]] {
+            for w in list {
+              let owner = w[kCGWindowOwnerName as String] as? String ?? ""
+              let name = w[kCGWindowName as String] as? String ?? ""
+              print("WINDOW: \(owner) | \(name)")
+            }
+          }
+          SWIFT
+          swift "$RUNNER_TEMP/windows.swift" > "$RUNNER_TEMP/windows.log" 2>&1 || true
+          if grep -qiE 'h2sim|dwsim|mono' "$RUNNER_TEMP/windows.log"; then
+            echo "WINDOW PROBE: found the app window"
+          else
+            echo "WINDOW PROBE: no matching window"
+          fi
+          cat "$RUNNER_TEMP/windows.log"
           kill "$pid" 2>/dev/null || true
           sleep 2
           tail -100 "$RUNNER_TEMP/package.log"
@@ -153,4 +171,5 @@ jobs:
             ${{ runner.temp }}/gtk3.log
             ${{ runner.temp }}/gtk3.png
             ${{ runner.temp }}/package.log
+            ${{ runner.temp }}/windows.log
           if-no-files-found: warn
