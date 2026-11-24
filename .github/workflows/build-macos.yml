@@ -190,8 +190,8 @@ jobs:
               ln -sf "$(basename "$src")" "$BUNDLE/lib/${alias}.dylib"
             fi
           done
-          cp -R /usr/local/lib/gtk-3.0 "$BUNDLE/lib/" || true
-          cp -R /usr/local/lib/gdk-pixbuf-2.0 "$BUNDLE/lib/" || true
+          cp -RL /usr/local/lib/gtk-3.0 "$BUNDLE/lib/" || true
+          cp -RL /usr/local/lib/gdk-pixbuf-2.0 "$BUNDLE/lib/" || true
           # The pixbuf loader .so files also link against Homebrew libs. Bundle
           # each one next to itself so the cache can load PNG/JPEG/SVG.
           for loader in "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so; do
@@ -201,12 +201,12 @@ jobs:
               -p "@loader_path" -s /usr/local/lib || true
           done
           mkdir -p "$BUNDLE/share" "$BUNDLE/etc"
-          cp -R /usr/local/share/gtk-3.0 "$BUNDLE/share/" || true
-          cp -R /usr/local/share/themes "$BUNDLE/share/" || true
-          cp -R /usr/local/share/icons "$BUNDLE/share/" || true
-          cp -R /usr/local/share/glib-2.0 "$BUNDLE/share/" || true
-          cp -R /usr/local/etc/gtk-3.0 "$BUNDLE/etc/" || true
-          cp -R /usr/local/etc/fonts "$BUNDLE/etc/" || true
+          cp -RL /usr/local/share/gtk-3.0 "$BUNDLE/share/" || true
+          cp -RL /usr/local/share/themes "$BUNDLE/share/" || true
+          cp -RL /usr/local/share/icons "$BUNDLE/share/" || true
+          cp -RL /usr/local/share/glib-2.0 "$BUNDLE/share/" || true
+          cp -RL /usr/local/etc/gtk-3.0 "$BUNDLE/etc/" || true
+          cp -RL /usr/local/etc/fonts "$BUNDLE/etc/" || true
           if command -v gdk-pixbuf-query-loaders >/dev/null; then
             GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
               gdk-pixbuf-query-loaders "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so \
