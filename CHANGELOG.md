@@ -2,6 +2,18 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.3.2] - 2026-11-24
+
+### Fixed
+
+- The macOS package now uses GTK3 and bundles the x86_64 GTK3 libraries, pixbuf
+  loaders and a runtime loader cache, so the dmg no longer needs a system GTK3
+  installation. The launcher sets `DYLD_LIBRARY_PATH` on the x86_64 side so
+  Rosetta does not strip it, and points fontconfig at the bundled config. CI
+  starts the packaged app with `/usr/local/lib` hidden and sees the `DWSIM`
+  main window. The package still needs Mono 6.12 (x86_64; Rosetta on Apple
+  Silicon).
+
 ## [0.3.1] - 2026-11-23
 
 ### Fixed
