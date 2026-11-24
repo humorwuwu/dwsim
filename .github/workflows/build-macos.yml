@@ -40,8 +40,15 @@ jobs:
           export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
           bash scripts/build-macos.sh
 
+      - name: Install GTK3 and dylibbundler
+        shell: bash
+        run: |
+          brew install gtk+3 dylibbundler
+
       - name: Package macOS dmg
         shell: bash
+        env:
+          H2SIM_BUNDLE_GTK3: "1"
         run: |
           export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
           bash scripts/package-macos.sh
@@ -119,8 +126,14 @@ jobs:
           sleep 2
           tail -100 "$RUNNER_TEMP/gtk3.log"
 
+      - name: Install dylibbundler
+        shell: bash
+        run: brew install dylibbundler
+
       - name: Package GTK3 dmg
         shell: bash
+        env:
+          H2SIM_BUNDLE_GTK3: "1"
         run: |
           export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
           bash scripts/package-macos.sh
@@ -131,6 +144,8 @@ jobs:
           export PATH="/Library/Frameworks/Mono.framework/Versions/Current/bin:$PATH"
           MNT="$RUNNER_TEMP/h2sim-mnt"
           hdiutil attach -nobrowse -mountpoint "$MNT" release/macos/H2sim-*-macos-x64.dmg
+          sudo mv /usr/local/lib /usr/local/lib.h2sim-hidden
+          trap 'sudo mv /usr/local/lib.h2sim-hidden /usr/local/lib 2>/dev/null || true; hdiutil detach "$MNT" 2>/dev/null || true' EXIT
           "$MNT/H2sim.app/Contents/MacOS/H2sim" > "$RUNNER_TEMP/package.log" 2>&1 &
           pid=$!
           sleep 30
@@ -160,94 +175,9 @@ jobs:
           kill "$pid" 2>/dev/null || true
           sleep 2
           tail -100 "$RUNNER_TEMP/package.log"
-          hdiutil detach "$MNT" || true
-
-      - name: Bundle GTK3 and run without system libs
-        shell: bash
-        run: |
-          set -euo pipefail
-          brew install dylibbundler
-          MNT="$RUNNER_TEMP/bundle-mnt"
-          APP="$RUNNER_TEMP/bundle-app/H2sim.app"
-          rm -rf "$RUNNER_TEMP/bundle-app" "$MNT"
-          mkdir -p "$RUNNER_TEMP/bundle-app" "$MNT"
-          hdiutil attach -nobrowse -mountpoint "$MNT" release/macos/H2sim-*-macos-x64.dmg
-          cp -R "$MNT/H2sim.app" "$RUNNER_TEMP/bundle-app/"
-          hdiutil detach "$MNT"
-          BUNDLE="$APP/Contents/MonoBundle"
-          chmod -R u+w "$APP"
-          mkdir -p "$BUNDLE/lib"
-          GTK_SOURCE="$(python3 -c 'import os; print(os.path.realpath("/usr/local/lib/libgtk-3.0.dylib"))')"
-          cp "$GTK_SOURCE" "$BUNDLE/lib/libgtk-3.0.dylib"
-          dylibbundler -cd -b -of -x "$BUNDLE/lib/libgtk-3.0.dylib" \
-            -d "$BUNDLE/lib" -p "@loader_path" -s /usr/local/lib
-          # Eto/GtkSharp P/Invokes the unversioned names; dylibbundler copies
-          # libfoo-X.Y.dylib, so add the aliases the runtime asks for.
-          for alias in libgdk_pixbuf-2.0 libgobject-2.0 libglib-2.0 libgio-2.0 \
-                       libgmodule-2.0 libpango-1.0 libpangocairo-1.0 libatk-1.0; do
-            src="$(ls "$BUNDLE/lib/${alias}"*.dylib 2>/dev/null | head -1 || true)"
-            if [[ -n "$src" ]]; then
-              ln -sf "$(basename "$src")" "$BUNDLE/lib/${alias}.dylib"
-            fi
-          done
-          cp -RL /usr/local/lib/gtk-3.0 "$BUNDLE/lib/" || true
-          cp -RL /usr/local/lib/gdk-pixbuf-2.0 "$BUNDLE/lib/" || true
-          # The pixbuf loader .so files also link against Homebrew libs. Bundle
-          # each one next to itself so the cache can load PNG/JPEG/SVG.
-          for loader in "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so; do
-            [[ -f "$loader" ]] || continue
-            dylibbundler -b -of -x "$loader" \
-              -d "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
-              -p "@loader_path" -s /usr/local/lib || true
-          done
-          mkdir -p "$BUNDLE/share" "$BUNDLE/etc"
-          cp -RL /usr/local/share/gtk-3.0 "$BUNDLE/share/" || true
-          cp -RL /usr/local/share/themes "$BUNDLE/share/" || true
-          cp -RL /usr/local/share/icons "$BUNDLE/share/" || true
-          cp -RL /usr/local/share/glib-2.0 "$BUNDLE/share/" || true
-          cp -RL /usr/local/etc/gtk-3.0 "$BUNDLE/etc/" || true
-          cp -RL /usr/local/etc/fonts "$BUNDLE/etc/" || true
-          if command -v gdk-pixbuf-query-loaders >/dev/null; then
-            GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
-              gdk-pixbuf-query-loaders "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so \
-              > "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" \
-              2> "$RUNNER_TEMP/query-loaders.log" || true
-          fi
-          echo "PIXBUF LOADERS:"
-          ls -1 "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" 2>/dev/null || true
-          echo "QUERY LOG:"
-          cat "$RUNNER_TEMP/query-loaders.log" 2>/dev/null || true
-          echo "CACHE PNG ENTRIES: $(grep -c 'image/png' "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" 2>/dev/null || echo 0)"
-          echo "PNG LOADER DEPS:"
-          otool -L "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-png.so" 2>/dev/null | head -12 || true
-          echo "BUNDLED LIBS: $(ls "$BUNDLE/lib" | wc -l)"
-          sudo mv /usr/local/lib /usr/local/lib.h2sim-hidden
-          trap 'sudo mv /usr/local/lib.h2sim-hidden /usr/local/lib || true' EXIT
-          cd "$BUNDLE"
-          export H2SIM_MAC_RENDERER=Gtk3
-          export PANGOCAIRO_BACKEND=fontconfig
-          export DYLD_LIBRARY_PATH="$BUNDLE/lib"
-          export GTK_DATA_PREFIX="$BUNDLE"
-          export XDG_DATA_DIRS="$BUNDLE/share:/usr/share"
-          export GDK_PIXBUF_MODULE_FILE="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
-          export GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders"
-          export GSETTINGS_SCHEMA_DIR="$BUNDLE/share/glib-2.0/schemas"
-          /Library/Frameworks/Mono.framework/Versions/Current/bin/mono DWSIM.UI.Desktop.exe \
-            > "$RUNNER_TEMP/bundled.log" 2>&1 &
-          pid=$!
-          sleep 30
-          if kill -0 "$pid" 2>/dev/null; then
-            echo "BUNDLED PROBE: process alive after 30 s"
-          else
-            echo "BUNDLED PROBE: process exited"
-          fi
-          swift "$RUNNER_TEMP/windows.swift" > "$RUNNER_TEMP/bundled-windows.log" 2>&1 || true
-          cat "$RUNNER_TEMP/bundled-windows.log"
-          kill "$pid" 2>/dev/null || true
-          sleep 2
-          sudo mv /usr/local/lib.h2sim-hidden /usr/local/lib || true
+          sudo mv /usr/local/lib.h2sim-hidden /usr/local/lib
           trap - EXIT
-          tail -100 "$RUNNER_TEMP/bundled.log"
+          hdiutil detach "$MNT" || true
 
       - name: Upload probe evidence
         if: always()

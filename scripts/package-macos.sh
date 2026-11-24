@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
 VERSION="$(tr -d '[:space:]' < VERSION)"
 SRC="DWSIM.UI.Desktop/bin/Release"
 ICON="packages/Eto.Platform.XamMac2.2.8.2/build/Icon.icns"
+BUNDLE_GTK3="${H2SIM_BUNDLE_GTK3:-0}"
 
 if [[ ! -f "$SRC/DWSIM.UI.Desktop.exe" ]]; then
   echo "缺少 $SRC/DWSIM.UI.Desktop.exe。先在本机构建 DWSIM.UI.Desktop（Release）。" >&2
@@ -26,7 +27,7 @@ BUNDLE="$APP/Contents/MonoBundle"
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$BUNDLE"
 
-# GTK3 外壳：确认 Rosetta、Mono 和 x86_64 GTK3，然后用 mono 直接启动。
+# GTK3 外壳：确认 Rosetta、Mono 和 GTK3，然后用 mono 直接启动。
 cat > "$APP/Contents/MacOS/H2sim" << 'EOF'
 #!/bin/bash
 set -euo pipefail
@@ -39,17 +40,27 @@ if [[ ! -x "$MONO" ]]; then
   osascript -e 'display dialog "H2sim 需要 Mono 6.12。请安装 Mono Framework MDK 后再打开。" buttons {"好"} default button 1 with title "H2sim"' || true
   exit 1
 fi
-GTK=/usr/local/lib/libgtk-3.0.dylib
-if [[ ! -f "$GTK" ]] || ! file "$GTK" | grep -q 'x86_64'; then
-  osascript -e 'display dialog "H2sim 的 macOS GTK3 版需要 x86_64 GTK3。Intel Mac：brew install gtk+3。Apple Silicon：需要在 Rosetta 前缀 /usr/local 安装 x86_64 GTK3（arch -x86_64 /usr/local/bin/brew install gtk+3）。" buttons {"好"} default button 1 with title "H2sim"' || true
-  exit 1
-fi
 DIR="$(cd "$(dirname "$0")" && pwd)"
+BUNDLE_DIR="$(cd "$DIR/../MonoBundle" && pwd)"
 export H2SIM_MAC_RENDERER=Gtk3
 export PANGOCAIRO_BACKEND=fontconfig
-export GTK_DATA_PREFIX=/usr/local
-export XDG_DATA_DIRS="/usr/local/share:${XDG_DATA_DIRS:-}"
-cd "$DIR/../MonoBundle"
+if [[ -f "$BUNDLE_DIR/lib/libgtk-3.0.dylib" ]]; then
+  export DYLD_LIBRARY_PATH="$BUNDLE_DIR/lib:${DYLD_LIBRARY_PATH:-}"
+  export GTK_DATA_PREFIX="$BUNDLE_DIR"
+  export XDG_DATA_DIRS="$BUNDLE_DIR/share:/usr/share:${XDG_DATA_DIRS:-}"
+  export GDK_PIXBUF_MODULE_FILE="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+  export GDK_PIXBUF_MODULEDIR="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+  export GSETTINGS_SCHEMA_DIR="$BUNDLE_DIR/share/glib-2.0/schemas"
+else
+  GTK=/usr/local/lib/libgtk-3.0.dylib
+  if [[ ! -f "$GTK" ]] || ! file "$GTK" | grep -q 'x86_64'; then
+    osascript -e 'display dialog "H2sim 的自包含 GTK3 包缺少内置库。请反馈构建问题，或安装 x86_64 GTK3（Intel：brew install gtk+3；Apple Silicon：Rosetta 前缀 /usr/local）。" buttons {"好"} default button 1 with title "H2sim"' || true
+    exit 1
+  fi
+  export GTK_DATA_PREFIX=/usr/local
+  export XDG_DATA_DIRS="/usr/local/share:${XDG_DATA_DIRS:-}"
+fi
+cd "$BUNDLE_DIR"
 exec arch -x86_64 "$MONO" DWSIM.UI.Desktop.exe
 EOF
 chmod +x "$APP/Contents/MacOS/H2sim"
@@ -70,6 +81,51 @@ if [[ -d PlatformFiles/macOS ]]; then
 fi
 rm -rf "$BUNDLE/ThermoCS"
 rm -f "$BUNDLE/DWSIM.ProFeatures.dll" "$BUNDLE/DWSIM.Thermodynamics.ThermoC.dll"
+
+if [[ "$BUNDLE_GTK3" == "1" ]]; then
+  command -v dylibbundler >/dev/null 2>&1 || {
+    echo "H2SIM_BUNDLE_GTK3=1 需要 dylibbundler（brew install dylibbundler）。" >&2
+    exit 1
+  }
+  GTK_SOURCE="$(realpath /usr/local/lib/libgtk-3.0.dylib)"
+  if [[ ! -f "$GTK_SOURCE" ]]; then
+    echo "找不到 x86_64 GTK3：/usr/local/lib/libgtk-3.0.dylib" >&2
+    exit 1
+  fi
+  mkdir -p "$BUNDLE/lib"
+  cp "$GTK_SOURCE" "$BUNDLE/lib/libgtk-3.0.dylib"
+  dylibbundler -cd -b -of -x "$BUNDLE/lib/libgtk-3.0.dylib" \
+    -d "$BUNDLE/lib" -p "@loader_path" -s /usr/local/lib
+  # Eto/GtkSharp P/Invokes the unversioned names.
+  for alias in libgdk_pixbuf-2.0 libgobject-2.0 libglib-2.0 libgio-2.0 \
+               libgmodule-2.0 libpango-1.0 libpangocairo-1.0 libatk-1.0; do
+    src="$(ls "$BUNDLE/lib/${alias}"*.dylib 2>/dev/null | head -1 || true)"
+    if [[ -n "$src" ]]; then
+      ln -sf "$(basename "$src")" "$BUNDLE/lib/${alias}.dylib"
+    fi
+  done
+  cp -RL /usr/local/lib/gtk-3.0 "$BUNDLE/lib/" 2>/dev/null || true
+  cp -RL /usr/local/lib/gdk-pixbuf-2.0 "$BUNDLE/lib/" 2>/dev/null || true
+  mkdir -p "$BUNDLE/share" "$BUNDLE/etc"
+  cp -RL /usr/local/share/gtk-3.0 "$BUNDLE/share/" 2>/dev/null || true
+  cp -RL /usr/local/share/themes "$BUNDLE/share/" 2>/dev/null || true
+  cp -RL /usr/local/share/icons "$BUNDLE/share/" 2>/dev/null || true
+  cp -RL /usr/local/share/glib-2.0 "$BUNDLE/share/" 2>/dev/null || true
+  cp -RL /usr/local/etc/gtk-3.0 "$BUNDLE/etc/" 2>/dev/null || true
+  cp -RL /usr/local/etc/fonts "$BUNDLE/etc/" 2>/dev/null || true
+  for loader in "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so; do
+    [[ -f "$loader" ]] || continue
+    dylibbundler -b -of -x "$loader" \
+      -d "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
+      -p "@loader_path" -s /usr/local/lib >/dev/null 2>&1 || true
+  done
+  if command -v gdk-pixbuf-query-loaders >/dev/null 2>&1; then
+    GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
+      gdk-pixbuf-query-loaders "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so \
+      > "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" 2>/dev/null || true
+  fi
+  echo "Bundled GTK3 libraries: $(ls "$BUNDLE/lib" | wc -l | tr -d ' ')"
+fi
 
 if [[ -f "$ICON" ]]; then
   cp "$ICON" "$APP/Contents/Resources/Icon.icns"
