@@ -210,8 +210,16 @@ jobs:
           if command -v gdk-pixbuf-query-loaders >/dev/null; then
             GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
               gdk-pixbuf-query-loaders "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so \
-              > "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" || true
+              > "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" \
+              2> "$RUNNER_TEMP/query-loaders.log" || true
           fi
+          echo "PIXBUF LOADERS:"
+          ls -1 "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" 2>/dev/null || true
+          echo "QUERY LOG:"
+          cat "$RUNNER_TEMP/query-loaders.log" 2>/dev/null || true
+          echo "CACHE PNG ENTRIES: $(grep -c 'image/png' "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" 2>/dev/null || echo 0)"
+          echo "PNG LOADER DEPS:"
+          otool -L "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-png.so" 2>/dev/null | head -12 || true
           echo "BUNDLED LIBS: $(ls "$BUNDLE/lib" | wc -l)"
           sudo mv /usr/local/lib /usr/local/lib.h2sim-hidden
           trap 'sudo mv /usr/local/lib.h2sim-hidden /usr/local/lib || true' EXIT
