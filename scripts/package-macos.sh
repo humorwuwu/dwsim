@@ -48,7 +48,12 @@ if [[ -f "$BUNDLE_DIR/lib/libgtk-3.0.dylib" ]]; then
   export DYLD_LIBRARY_PATH="$BUNDLE_DIR/lib:${DYLD_LIBRARY_PATH:-}"
   export GTK_DATA_PREFIX="$BUNDLE_DIR"
   export XDG_DATA_DIRS="$BUNDLE_DIR/share:/usr/share:${XDG_DATA_DIRS:-}"
-  export GDK_PIXBUF_MODULE_FILE="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+  CACHE_SRC="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+  if [[ -f "$CACHE_SRC" ]]; then
+    CACHE_TMP="${TMPDIR:-/tmp}/h2sim-pixbuf-$$.cache"
+    sed "s|@H2SIM_BUNDLE@|$BUNDLE_DIR|g" "$CACHE_SRC" > "$CACHE_TMP"
+    export GDK_PIXBUF_MODULE_FILE="$CACHE_TMP"
+  fi
   export GDK_PIXBUF_MODULEDIR="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"
   export GSETTINGS_SCHEMA_DIR="$BUNDLE_DIR/share/glib-2.0/schemas"
 else
@@ -123,6 +128,12 @@ if [[ "$BUNDLE_GTK3" == "1" ]]; then
     GDK_PIXBUF_MODULEDIR="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders" \
       gdk-pixbuf-query-loaders "$BUNDLE"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so \
       > "$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" 2>/dev/null || true
+    # The cache stores absolute paths from the staging directory. Replace the
+    # bundle prefix with a placeholder; the launcher expands it at runtime.
+    CACHE="$BUNDLE/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+    if [[ -f "$CACHE" ]]; then
+      sed -i '' "s|$BUNDLE|@H2SIM_BUNDLE@|g" "$CACHE"
+    fi
   fi
   echo "Bundled GTK3 libraries: $(ls "$BUNDLE/lib" | wc -l | tr -d ' ')"
 fi
