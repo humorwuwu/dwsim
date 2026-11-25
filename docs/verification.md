@@ -22,8 +22,19 @@
 - macOS 包：`release/macos/H2sim-0.3.2-macos-x64.dmg`（179 MiB，SHA-256
   `9042c49a…`），`DWSIM.UI.Desktop.exe` 版本 `0.3.2.0`，内置 GTK3，含两个厂模板。
 - 自包含探测 run `45319801481`：隐藏 `/usr/local/lib` 后打包 app 仍存活并创建
-  `mono | DWSIM` 窗口。本机 Apple Silicon 复测 GTK3/fontconfig 从内置库加载；
-  agent 会话无显示器，停在 `Screen.get_WorkingArea`。
+  `mono | DWSIM` 窗口。
+- **真实显示器验证（2026-11-25）**：在本机 Apple Silicon 上用 `open` 打开
+  `release/macos/H2sim-0.3.2-macos-x64.dmg`，LaunchServices 启动
+  `DWSIM Launcher`，主窗口显示 `Version 0.3.2 (Cross-Platform UI, 64-bit)`。
+  截图：`assets/macos-gtk3-0.3.2-launcher.png`、
+  `assets/macos-gtk3-0.3.2-main.png`。启动器用
+  `arch -x86_64 env DYLD_LIBRARY_PATH=...` 绕过 Rosetta 切换丢环境变量；
+  GTK3/fontconfig 从内置库加载。
+- 边界：本次验证覆盖启动、Launcher 和主窗口渲染；完整菜单/绘图/计算交互
+  仍待人工走查。
+- `openplc-compiler` job 现在在 push 时跳过，只有手动
+  `workflow_dispatch` 传 `openplc=true` 才运行；run `45518536287` 已确认
+  skipped，Windows 构建/打包继续。
 
 ## V-5.1.1 Modbus 自环（无 OpenPLC）
 
@@ -216,8 +227,8 @@
   后的本机重打包版本（180 MiB，SHA-256 `0bdde4b8…`）。
 - 结论：**GTK3 自包含包可行**；XamMac2 仍然不可用。目标机只需要 Mono 6.12
   （x86_64；Apple Silicon 走 Rosetta），不需要单独安装 GTK3。
-- 还缺：真实显示器上的截图/交互验证（runner 和 agent 会话都没有可截图的
-  显示会话）。
+- 真实显示器验证已完成（2026-11-25，见 0.3.2 节和 `assets/` 截图）；完整
+  菜单/绘图/计算交互仍待人工走查。
 
 ## Gate 0 V-3 macOS 桌面启动（2026-11-23）
 

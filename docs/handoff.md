@@ -27,8 +27,9 @@
   （179 MiB，SHA-256 `9042c49a…`），目标机只需 Mono 6.12（Apple Silicon 走
   Rosetta），不再需要单独安装 GTK3。启动器用
   `arch -x86_64 env DYLD_LIBRARY_PATH=...` 绕过 Rosetta 切换丢环境变量；
-  本机 Apple Silicon 已确认 GTK3/fontconfig 从内置库加载，agent 会话无显示器，
-  停在 `Screen.get_WorkingArea`。真实显示器截图仍待补。
+  本机 Apple Silicon 已确认 GTK3/fontconfig 从内置库加载，并用 `open` 启动了
+  `DWSIM Launcher` 和显示 `Version 0.3.2` 的主窗口
+  （截图：`assets/macos-gtk3-0.3.2-*.png`）。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
@@ -114,8 +115,9 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
 8. **macOS 桌面方案 M1 已判失败，不要再试图用系统 Mono 启动 XamMac2。**
    GTK3 是当前运行时路径：包启动器用 mono 直接跑 `DWSIM.UI.Desktop.exe`，
    设置 `H2SIM_MAC_RENDERER=Gtk3` 和 `PANGOCAIRO_BACKEND=fontconfig`；XamMac2
-   启动器不再进包。CI 已验证打包后的 app 存活 30 s，但还没有真实显示器截图。
-   GTK3 需要 x86_64 的 `libgtk-3.0.dylib`。
+   启动器不再进包。CI 探针和本机 Apple Silicon `open` 已经验证打包后的 app
+   创建 `DWSIM Launcher` / 主窗口，截图在 `assets/macos-gtk3-0.3.2-*.png`。
+   GTK3 需要 x86_64 的 `libgtk-3.0.dylib`（已内置）。
 
 ## 5. 下一步
 
@@ -156,15 +158,20 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
 5. **macOS 桌面走 GTK3（.NET 8 仍是备选）。** 本地编译、dmg 打包和 GitHub
    `build-macos` 已补全；包启动器已改为 mono + GTK3，GTK3 库/pixbuf loaders
    已打进 dmg（`H2SIM_BUNDLE_GTK3=1`）。CI 探针确认隐藏 `/usr/local/lib` 后
-   打包 app 仍存活并创建 `DWSIM` 窗口（run `45319801481`）。目标机只需要
-   **Mono 6.12**（x86_64；Apple Silicon 走 Rosetta）。还差真实显示器上的
-   截图/交互验证。
+   打包 app 仍存活并创建 `DWSIM` 窗口（run `45319801481`）；本机 Apple Silicon
+   用 `open` 启动 0.3.2 dmg，Launcher 和 `Version 0.3.2` 主窗口已截图
+   （`assets/macos-gtk3-0.3.2-*.png`）。目标机只需要 **Mono 6.12**
+   （x86_64；Apple Silicon 走 Rosetta）。完整菜单/绘图/计算交互仍待人工走查。
 6. **`PROJECTS.md` 已登记。** 目录名 `H2sim` 保留大写，写在工作区「项目例外」里。
 
 明确不做：
 
 - V-5.1.8 / V-5.1.9 / V-5.1.10
 - OPC UA `Basic256Sha256` + Username、断线重连、权限不足
+
+`openplc-compiler` job 现在在 push 时跳过（`build-windows.yml` 里
+`workflow_dispatch` 的 `openplc=true` 才跑），这样暂停 PLC 期间 Windows
+release 不会被 fixture 编译失败拖红。
 
 ## 6. 在这台机器上验证
 
