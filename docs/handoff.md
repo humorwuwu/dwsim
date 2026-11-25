@@ -144,13 +144,13 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
    `20.247.166.64` 是当前 `dig github.com` 的地址；失效时重新查。纯文档 commit 可带
    `[skip ci]` 避免再跑一轮。
 
-2. **Windows 安装包已按 0.3.1 构建并在 CI 里装过。** 最新包来自 CI run
-   `45118882085` 的 `h2sim-windows-package` artifact：
-   `release/windows/H2sim-0.3.1-windows-x64.exe`（195 MiB，SHA-256 `8c5bd493…`）。
-   包内 3718 个文件，`DWSIM.exe` 的 `AssemblyVersion` 是 `0.3.1.0`。
+2. **Windows 安装包已按 0.4.0 构建并在 CI 里装过。** 最新包来自绿色 run
+   `45525384510` 的 `h2sim-windows-package` artifact：
+   `release/windows/H2sim-0.4.0-windows-x64.exe`（195 MiB，SHA-256 `c1b98a59…`）。
+   包内 3718 个文件，`DWSIM.exe` 的 `AssemblyVersion` 是 `0.4.0.0`。
 
    CI 的 **Smoke test the Windows package** 会 `/S` 静默安装到
-   `%LOCALAPPDATA%\H2sim\0.3.1`、检查 `DWSIM.exe` 与 `samples/`、再启动并存活 20 s。
+   `%LOCALAPPDATA%\H2sim\0.4.0`、检查 `DWSIM.exe` 与 `samples/`、再启动并存活 20 s。
    还差一台干净的 Windows 机器做人工双击验证；`release/` 不进 git。
 
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。
