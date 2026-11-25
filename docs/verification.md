@@ -9,6 +9,18 @@
 - 测试：`DWSIM.H2sim.Io.Tests`、`DWSIM.Automation.Dynamics.Tests`，以及
   OpenPLC v4 官方 Modbus/OPC UA 插件探针
 
+## 0.4.0 发布构建（2026-11-25）
+
+- Windows run `45525384510`：整轮 **success**，Debug/Release、安装/启动冒烟、
+  SignalMap、动态测试、模板生成、单文件打包全部通过；OpenPLC skipped。
+  包：`release/windows/H2sim-0.4.0-windows-x64.exe`（195 MiB，SHA-256
+  `c1b98a59…`）。
+- macOS run `45525384567`：整轮 **success**，自包含 GTK3 dmg（44 个库），
+  动力学测试 **PASS**。包：`release/macos/H2sim-0.4.0-macos-x64.dmg`
+  （179 MiB，SHA-256 `664da293…`），`DWSIM.UI.Desktop.exe` 版本 `0.4.0.0`。
+- 本版新增 LyeLoop 冷却模式（`CoolingMode=1`），WaterFlow 仍是默认；
+  详见下面的 T-1.4 节。
+
 ## 0.3.2 发布构建（2026-11-24）
 
 - Windows run `45325305935`：`build (Debug)` 和 `build (Release)` 都成功，

@@ -80,9 +80,9 @@ bash scripts/package-macos.sh
 
 - 前置：先 `bash scripts/build-macos.sh`，`DWSIM.UI.Desktop/bin/Release/DWSIM.UI.Desktop.exe` 存在。
 - 产物：`release/macos/H2sim-<version>-macos-x64.dmg`，内含 `H2sim.app`。
-- 0.3.2 已在本机和 GitHub `macos-15-intel` runner 打出；当前
-  `release/macos/H2sim-0.3.2-macos-x64.dmg` 是 **自包含 GTK3 版**（179 MiB，
-  SHA-256 `9042c49a…`）。启动器用 `arch -x86_64 env DYLD_LIBRARY_PATH=...`
+- 0.4.0 已在本机和 GitHub `macos-15-intel` runner 打出；当前
+  `release/macos/H2sim-0.4.0-macos-x64.dmg` 是 **自包含 GTK3 版**（179 MiB，
+  SHA-256 `664da293…`）。启动器用 `arch -x86_64 env DYLD_LIBRARY_PATH=...`
   绕过 Rosetta 切换时丢失环境变量的问题。
 - 主程序是 x86_64，Apple Silicon 上由 Rosetta 运行。
 - 启动器走 **GTK3 + mono**：设置 `H2SIM_MAC_RENDERER=Gtk3`、

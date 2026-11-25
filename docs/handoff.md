@@ -6,7 +6,7 @@
 
 - 仓库：`/Volumes/SSD_exit/code_go/H2sim`（外置 SSD；旧的 `/Users/wcx/ongoing/H2sim` 已不是工作副本）
 - 分支：`h2sim/phase-a`
-- 版本：`VERSION` = `0.3.2`，`CHANGELOG.md` 有对应的 0.3.2 节，所有 `AssemblyInfo` 已同步
+- 版本：`VERSION` = `0.4.0`，`CHANGELOG.md` 有对应的 0.4.0 节，所有 `AssemblyInfo` 已同步
 - 今天的工作已提交并推送（`origin/h2sim/phase-a`）：
   - `T-0.3`：非 Windows 构建 + macOS 打包脚本
   - `T-4.1`：阴极闪蒸 + 两级压缩断言 + ALK SEC 回归
@@ -18,17 +18,18 @@
   - `release 0.3.1`：版本与 `AssemblyInfo`
   - `macos`：GTK3 启动、自包含 bundle、Rosetta env/fontconfig 修复
   - `release 0.3.2`：版本与 `AssemblyInfo`
-- Windows 0.3.2 绿色 run `45518536287`：`build (Debug)`/`build (Release)` 都成功，
-  OpenPLC skipped；包在 `release/windows/H2sim-0.3.2-windows-x64.exe`
-  （195 MiB，SHA-256 `bc51d89e…`）。0.3.0/0.3.1 的包也还在同目录，留作回退。
-- macOS 0.3.2 run `45325305883`：整轮 **success**，44 个内置 GTK3 库，
-  动力学测试 **PASS**。包在 `release/macos/H2sim-0.3.2-macos-x64.dmg`
-  （179 MiB，SHA-256 `9042c49a…`），目标机只需 Mono 6.12（Apple Silicon 走
+  - `T-1.4`：LyeLoop 冷却模式（effectiveness-NTU）
+  - `release 0.4.0`：版本与 `AssemblyInfo`
+- Windows 0.4.0 run `45525384510`：整轮 **success**，OpenPLC skipped；包在
+  `release/windows/H2sim-0.4.0-windows-x64.exe`（195 MiB，SHA-256
+  `c1b98a59…`）。旧版本的包也还在同目录，留作回退。
+- macOS 0.4.0 run `45525384567`：整轮 **success**，44 个内置 GTK3 库，
+  动力学测试 **PASS**。包在 `release/macos/H2sim-0.4.0-macos-x64.dmg`
+  （179 MiB，SHA-256 `664da293…`），目标机只需 Mono 6.12（Apple Silicon 走
   Rosetta），不再需要单独安装 GTK3。启动器用
   `arch -x86_64 env DYLD_LIBRARY_PATH=...` 绕过 Rosetta 切换丢环境变量；
-  本机 Apple Silicon 已确认 GTK3/fontconfig 从内置库加载，并用 `open` 启动了
-  `DWSIM Launcher` 和显示 `Version 0.3.2` 的主窗口
-  （截图：`assets/macos-gtk3-0.3.2-*.png`）。
+  GTK3 路径已在 0.3.2 上做过真实窗口验证
+  （`assets/macos-gtk3-0.3.2-*.png`），0.4.0 沿用同一打包链。
 - 本机 `mono` 跑 `DWSIM.Automation.Dynamics.Tests`，末行 **PASS**（约 7 分钟）。
   日志里的 ThermoC / ThermoCS `TypeLoadException` 是 i386 原生库，忽略，以末行 `PASS` 为准。
 
