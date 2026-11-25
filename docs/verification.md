@@ -16,7 +16,7 @@
   单文件打包全部通过。整轮结论是 failure，**只因 `openplc-compiler` 的 fixture
   编译失败**（PLC 工作按 2026-11-22 方向暂停，不影响 Windows 产物）。
 - Windows 包：`release/windows/H2sim-0.3.2-windows-x64.exe`（195 MiB，SHA-256
-  `d4047e0d…`）。
+  `bc51d89e…`，来自绿色 run `45518536287`）。
 - macOS run `45325305883`：整轮 **success**；`Bundled GTK3 libraries: 44`，
   动力学测试末行 **PASS**。
 - macOS 包：`release/macos/H2sim-0.3.2-macos-x64.dmg`（179 MiB，SHA-256
@@ -33,8 +33,8 @@
 - 边界：本次验证覆盖启动、Launcher 和主窗口渲染；完整菜单/绘图/计算交互
   仍待人工走查。
 - `openplc-compiler` job 现在在 push 时跳过，只有手动
-  `workflow_dispatch` 传 `openplc=true` 才运行；run `45518536287` 已确认
-  skipped，Windows 构建/打包继续。
+  `workflow_dispatch` 传 `openplc=true` 才运行；run `45518536287` 整轮
+  **success**（Debug/Release 都成功，OpenPLC skipped）。
 
 ## V-5.1.1 Modbus 自环（无 OpenPLC）
 

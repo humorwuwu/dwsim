@@ -18,10 +18,9 @@
   - `release 0.3.1`：版本与 `AssemblyInfo`
   - `macos`：GTK3 启动、自包含 bundle、Rosetta env/fontconfig 修复
   - `release 0.3.2`：版本与 `AssemblyInfo`
-- Windows 0.3.2 run `45325305935`：`build (Release)` 成功（含安装/启动冒烟），
-  整轮红只因 `openplc-compiler` fixture 编译失败（PLC 暂停）。包在
-  `release/windows/H2sim-0.3.2-windows-x64.exe`（195 MiB，
-  SHA-256 `d4047e0d…`）。0.3.0/0.3.1 的包也还在同目录，留作回退。
+- Windows 0.3.2 绿色 run `45518536287`：`build (Debug)`/`build (Release)` 都成功，
+  OpenPLC skipped；包在 `release/windows/H2sim-0.3.2-windows-x64.exe`
+  （195 MiB，SHA-256 `bc51d89e…`）。0.3.0/0.3.1 的包也还在同目录，留作回退。
 - macOS 0.3.2 run `45325305883`：整轮 **success**，44 个内置 GTK3 库，
   动力学测试 **PASS**。包在 `release/macos/H2sim-0.3.2-macos-x64.dmg`
   （179 MiB，SHA-256 `9042c49a…`），目标机只需 Mono 6.12（Apple Silicon 走
