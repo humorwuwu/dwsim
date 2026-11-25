@@ -2,6 +2,17 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [0.4.0] - 2026-11-25
+
+### Added
+
+- A lye-loop cooling mode for the electrolyzers (`CoolingMode=1`). The stack
+  energy balance uses an effectiveness-NTU conductance
+  `epsilon * min(m_lye*cp_lye, m_cw*cp_cw)` with the connected cooling stream
+  as the secondary side. `CoolingMode=0` keeps the existing direct water-flow
+  behavior. `LyeFlow`, `LyeCp` and `HXEffectiveness` are exposed as parameters.
+  The R7 variable-flow gain (8-12%) is not calibrated and is not claimed.
+
 ## [0.3.2] - 2026-11-24
 
 ### Fixed
