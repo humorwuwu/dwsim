@@ -97,6 +97,7 @@ namespace DWSIM.Automation.Dynamics.Tests
             TestInterlocks();
             TestDynamicSupport();
             TestElectrolyzerReport();
+            TestLyeLoopCooling();
             TestDynamicSamples();
             TestDynamicBaseline();
             TestPlantSamples();
@@ -839,6 +840,28 @@ namespace DWSIM.Automation.Dynamics.Tests
             Check(unit.GetPropertyUnit("H2 in O2") == "%", "H2-in-O2 unit is percent");
             Check(unit.GetPropertyUnit("O2 in H2") == "%", "O2-in-H2 unit is percent");
             Check(unit.GetPropertyUnit("Faraday Efficiency") == "", "Faraday efficiency is a fraction");
+        }
+
+        /// <summary>
+        /// T-1.4 lye-loop cooling: effectiveness-NTU conductance uses the smaller heat
+        /// capacity rate, clamps effectiveness, and removes no heat without cooling water.
+        /// WaterFlow remains the default mode.
+        /// </summary>
+        private static void TestLyeLoopCooling()
+        {
+            var pem = new PEMElectrolyzer();
+            Check(pem.Parameters.ContainsKey("CoolingMode") && pem.Parameters["CoolingMode"].Value == 0.0,
+                "water flow is the default cooling mode");
+
+            var expected = 0.8 * Math.Min(10.0 * 3500.0, 5.0 * 4180.0);
+            Check(Math.Abs(pem.LyeLoopConductance(10.0, 3500.0, 5.0, 4180.0, 0.8) - expected) < 1e-9,
+                "lye loop conductance is effectiveness times Cmin");
+            Check(pem.LyeLoopConductance(10.0, 3500.0, 0.0, 4180.0, 0.8) == 0.0,
+                "lye loop removes no heat without cooling water");
+            Check(Math.Abs(pem.LyeLoopConductance(10.0, 3500.0, 5.0, 4180.0, 1.5) - 20900.0) < 1e-9,
+                "lye loop effectiveness is clamped to 1");
+            Check(Math.Abs(pem.LyeLoopConductance(0.1, 1000.0, 5.0, 4180.0, 0.8) - 80.0) < 1e-9,
+                "lye side can be the smaller heat capacity rate");
         }
 
         /// <summary>

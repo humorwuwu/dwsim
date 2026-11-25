@@ -49,6 +49,26 @@ CI 数值回归。`ModelAlkaline_SemiEmpirical` 的 `a_act`、`b_act`、
 动态热积分已有 4 个解析基准点（含 60 s/600 s 大步长），用于约束内部子步稳定性；
 与 Dinh 2021 的时间常数对比仍需论文原始曲线。
 
+## 冷却模式
+
+| 参数 | 默认 | 单位 | 说明 |
+|---|---|---|---|
+| `CoolingMode` | 0 | - | 0 = 冷却水直接流过电堆（WaterFlow）；1 = 碱液循环 + 板换（LyeLoop） |
+| `LyeFlow` | 10 | kg/s | 碱液循环质量流量 |
+| `LyeCp` | 3500 | J/kgK | 碱液比热 |
+| `HXEffectiveness` | 0.8 | - | 碱液/冷却水板换的有效度，0–1 |
+
+LyeLoop 用标准 effectiveness-NTU 模型：
+
+```
+Q = epsilon * min(m_lye*cp_lye, m_cw*cp_cw) * (T_stack - T_cw_in)
+```
+
+电堆热平衡仍用 `IntegrateStackTemperature`，把上式折算成等效水流量。
+没有连接冷却水或任一侧流量为 0 时，换热量为 0。
+这是通用机理模型；R7 的“变流量比定流量多产氢 8–12%”没有原始曲线/拓扑，
+**未标定**，不能当作已验证收益。
+
 ## 联锁阈值
 
 | 参数 | PEM 默认 | 单位 |

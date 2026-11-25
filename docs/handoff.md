@@ -153,7 +153,9 @@ Windows 上 `H2SIM_NO_WPF` 不定义，这些分支仍参与编译。**这批改
    还差一台干净的 Windows 机器做人工双击验证；`release/` 不进 git。
 
 3. **Dinh 2021 热时间常数、R2 穿透曲线。** 仓库里没有可数字化的原始曲线。只有拿到曲线再做回归。
-4. **LyeLoop 冷却模式未实现**（T-1.4）。当前只有 WaterFlow；R7 的变流量收益需要回路拓扑和曲线。
+4. **LyeLoop 冷却模式已实现通用 effectiveness-NTU 模型**（`CoolingMode=1`、
+   `LyeFlow`、`LyeCp`、`HXEffectiveness`），`WaterFlow` 仍是默认。R7 的
+   8–12% 变流量收益缺原始曲线/拓扑，未标定。
 5. **macOS 桌面走 GTK3（.NET 8 仍是备选）。** 本地编译、dmg 打包和 GitHub
    `build-macos` 已补全；包启动器已改为 mono + GTK3，GTK3 库/pixbuf loaders
    已打进 dmg（`H2SIM_BUNDLE_GTK3=1`）。CI 探针确认隐藏 `/usr/local/lib` 后

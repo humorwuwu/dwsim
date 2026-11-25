@@ -134,6 +134,10 @@ Namespace UnitOperations
             AddParameter("m_stack", "Stack mass", 500.0, "kg")
             AddParameter("Cp_stack", "Stack specific heat", 500.0, "J/kgK")
             AddParameter("U_loss_area", "Stack heat loss coefficient", 50.0, "W/K")
+            AddParameter("CoolingMode", "0 = water flow, 1 = lye loop", 0.0, "")
+            AddParameter("LyeFlow", "Lye circulation mass flow", 10.0, "kg/s")
+            AddParameter("LyeCp", "Lye specific heat", 3500.0, "J/kgK")
+            AddParameter("HXEffectiveness", "Lye/cooling-water HX effectiveness", 0.8, "")
 
             ' Alkaline electrode kinetics and ohmic losses (used by ModelAlkaline_SemiEmpirical).
             AddParameter("a_act", "ALK Tafel intercept", 0.30, "V")
@@ -276,6 +280,24 @@ Namespace UnitOperations
 
         End Function
 
+        ''' <summary>
+        ''' Heat conductance from the stack to the secondary cooling water in lye-loop mode.
+        ''' Uses the standard effectiveness-NTU result for the hot-side inlet at the stack
+        ''' temperature: Q = effectiveness * min(m_lye*cp_lye, m_cw*cp_cw) * (T_stack - T_cw_in).
+        ''' Returns 0 when either side has no flow, so an unconnected loop cannot remove heat.
+        ''' </summary>
+        Public Function LyeLoopConductance(mLye As Double, cpLye As Double,
+                                           mCoolingWater As Double, cpCoolingWater As Double,
+                                           effectiveness As Double) As Double
+
+            Dim cLye = Math.Max(mLye, 0.0) * Math.Max(cpLye, 1.0)
+            Dim cWater = Math.Max(mCoolingWater, 0.0) * Math.Max(cpCoolingWater, 1.0)
+            If cLye <= 0.0 OrElse cWater <= 0.0 Then Return 0.0
+            Dim eps = Math.Min(Math.Max(effectiveness, 0.0), 1.0)
+            Return eps * Math.Min(cLye, cWater)
+
+        End Function
+
         Public Overrides Sub RunDynamicModel()
 
             Dim schedule = FlowSheet.DynamicsManager.ScheduleList(FlowSheet.DynamicsManager.CurrentSchedule)
@@ -305,9 +327,11 @@ Namespace UnitOperations
                 ' When the stack is connected to a cooling stream, take the flow and supply
                 ' temperature from it so the thermal model follows the plant, not a fixed default.
                 Dim coolingIn = GetInletMaterialStream(1)
+                Dim mCoolingWater = 0.0
                 If coolingIn IsNot Nothing Then
                     Dim streamFlow = coolingIn.GetMassFlow()
                     If streamFlow > 0.0 Then
+                        mCoolingWater = streamFlow
                         mCoolant = streamFlow
                         TcoolIn = coolingIn.GetTemperature()
                         SetDynamicProperty("Cooling Water Flow", mCoolant)
@@ -322,6 +346,19 @@ Namespace UnitOperations
                 Dim TAmbient = 298.15
                 propertyValue = GetDynamicProperty("Ambient Temperature")
                 If propertyValue IsNot Nothing Then TAmbient = Convert.ToDouble(propertyValue)
+
+                ' Lye loop: the stack heats the circulating lye, which is cooled by the
+                ' connected stream through a plate heat exchanger. Use the effectiveness-NTU
+                ' conductance as an equivalent water flow into the same stack energy balance.
+                If ParameterValue("CoolingMode", 0.0) >= 0.5 Then
+                    Dim qUA = LyeLoopConductance(
+                        ParameterValue("LyeFlow", 10.0),
+                        ParameterValue("LyeCp", 3500.0),
+                        mCoolingWater,
+                        cpCoolant,
+                        ParameterValue("HXEffectiveness", 0.8))
+                    mCoolant = qUA / Math.Max(cpCoolant, 1.0)
+                End If
 
                 StackTemperature = IntegrateStackTemperature(Tstack, timestep, CoolingDuty * 1000.0,
                                                              mCoolant, cpCoolant, TcoolIn, TAmbient)

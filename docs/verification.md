@@ -282,6 +282,17 @@
   Faraday 效率和 HHV/LHV 效率保持分数（不加 `%`）。
 - 本地 `DWSIM.Automation.Dynamics.Tests` 完整跑过，末行 **PASS**。
 
+## T-1.4 LyeLoop 冷却（0.4.0）
+
+- `CoolingMode=0` 保持 WaterFlow（连接流流量/进口温度）；`CoolingMode=1` 用
+  effectiveness-NTU 模型：
+  `Q = epsilon * min(m_lye*cp_lye, m_cw*cp_cw) * (T_stack - T_cw_in)`。
+- 参数：`LyeFlow`（kg/s）、`LyeCp`（J/kgK）、`HXEffectiveness`（0–1）。
+- 测试覆盖：Cmin 取碱液侧/冷却水侧两种情形、effectiveness 钳位到 1、没有冷却水
+  时换热量为 0、默认 `CoolingMode=0`。
+- 本机 `DWSIM.Automation.Dynamics.Tests` 完整跑过，末行 **PASS**。
+- 边界：R7 的“变流量比定流量多产氢 8–12%”没有原始曲线/拓扑，**未标定**。
+
 ## T-5.2 电解槽数值回归
 
 - 极化曲线：Bzovsky 2024 Fig. 2 数字化 18 点，60/70/80 degC、0.1–2.5 A/cm2，
