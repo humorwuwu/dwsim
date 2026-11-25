@@ -3,6 +3,11 @@ name: build-windows
 on:
   push:
   workflow_dispatch:
+    inputs:
+      openplc:
+        description: "Run the paused OpenPLC three-loop fixture"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -195,6 +200,9 @@ jobs:
           if-no-files-found: error
 
   openplc-compiler:
+    # PLC work is paused. Skip on push; run only with a manual workflow_dispatch
+    # input (openplc=true) until the fixture/toolchain is fixed.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.openplc == true }}
     runs-on: ubuntu-22.04
     timeout-minutes: 40
     steps:
